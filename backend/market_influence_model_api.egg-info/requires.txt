@@ -1,0 +1,14 @@
+fastapi<1.0.0,>=0.116.0
+uvicorn[standard]<1.0.0,>=0.35.0
+pydantic-settings<3.0.0,>=2.10.0
+openai<2.0.0,>=1.109.0
+numpy<3.0.0,>=2.3.0
+pandas<3.0.0,>=2.3.0
+scikit-learn<2.0.0,>=1.7.0
+statsmodels<1.0.0,>=0.14.5
+xgboost<4.0.0,>=3.0.0
+yfinance<1.0.0,>=0.2.65
+
+[dev]
+httpx<1.0.0,>=0.28.0
+pytest<9.0.0,>=8.4.0
