@@ -19,7 +19,6 @@ import {
   updateStoredAuthUser,
 } from "@/lib/auth";
 
-const DEFAULT_TICKERS = ["AAPL", "MSFT", "NVDA"];
 const DEFAULT_HORIZON = 14;
 const DEFAULT_WINDOW = 180;
 
@@ -35,7 +34,7 @@ type ForecastCardState = {
 export function ForecastDashboard() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
-  const [selectedTickers, setSelectedTickers] = useState<string[]>(DEFAULT_TICKERS);
+  const [selectedTickers, setSelectedTickers] = useState<string[]>([]);
   const [tickerInput, setTickerInput] = useState("");
   const [forecastDays, setForecastDays] = useState(`${DEFAULT_HORIZON}`);
   const [analysisWindowDays, setAnalysisWindowDays] = useState(`${DEFAULT_WINDOW}`);
@@ -92,16 +91,6 @@ export function ForecastDashboard() {
       window.removeEventListener(AUTH_STATE_EVENT, handleAuthStateChange);
     };
   }, []);
-
-  useEffect(() => {
-    if (!authToken) {
-      return;
-    }
-
-    const parsedForecastDays = parsePositiveInteger(forecastDays) ?? DEFAULT_HORIZON;
-    const parsedAnalysisWindowDays = parsePositiveInteger(analysisWindowDays) ?? DEFAULT_WINDOW;
-    void loadForecasts(authToken, selectedTickers, parsedForecastDays, parsedAnalysisWindowDays);
-  }, [authToken]);
 
   async function loadForecasts(
     token: string,

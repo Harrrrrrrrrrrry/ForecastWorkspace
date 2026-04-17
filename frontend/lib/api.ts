@@ -1,5 +1,31 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const FORECAST_REQUEST_TIMEOUT_MS = 30_000;
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number,
+  timeoutMessage: string,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(timeoutMessage);
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 async function readErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
   try {
@@ -183,19 +209,24 @@ export async function fetchForecast(
   horizonDays = 14,
   analysisWindowDays = 180,
 ): Promise<ForecastResponse> {
-  const response = await fetch(`${API_BASE_URL}/forecast`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/forecast`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+      body: JSON.stringify({
+        ticker: ticker.trim().toUpperCase(),
+        horizon_days: horizonDays,
+        analysis_window_days: analysisWindowDays,
+      }),
     },
-    cache: "no-store",
-    body: JSON.stringify({
-      ticker: ticker.trim().toUpperCase(),
-      horizon_days: horizonDays,
-      analysis_window_days: analysisWindowDays,
-    }),
-  });
+    FORECAST_REQUEST_TIMEOUT_MS,
+    "Forecast request timed out after 30 seconds. Please try again.",
+  );
 
   if (!response.ok) {
     throw new Error(await readErrorMessage(response, `Forecast request failed with status ${response.status}`));
