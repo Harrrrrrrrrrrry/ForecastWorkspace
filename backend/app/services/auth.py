@@ -329,16 +329,23 @@ class AuthService:
             )
             return
 
+        existing_password_hash = str(existing_user["password_hash"])
+        password_hash = (
+            existing_password_hash
+            if self._verify_password(self.settings.owner_password, existing_password_hash)
+            else self._hash_password(self.settings.owner_password)
+        )
         connection.execute(
             """
             UPDATE users
-            SET full_name = COALESCE(full_name, ?),
+            SET password_hash = ?,
+                full_name = COALESCE(full_name, ?),
                 status = 'approved',
                 role = 'owner',
                 approved_at = COALESCE(approved_at, ?)
             WHERE email = ?
             """,
-            (owner_name, now, owner_email),
+            (password_hash, owner_name, now, owner_email),
         )
 
     def _delete_expired_tokens(self, connection: sqlite3.Connection) -> None:

@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services.auth import auth_service
 
 
 client = TestClient(app)
@@ -59,6 +60,30 @@ def test_owner_account_is_bootstrapped_and_can_sign_in() -> None:
     payload = response.json()
     assert payload["user"]["status"] == "approved"
     assert payload["user"]["role"] == "owner"
+
+
+def test_owner_password_updates_when_environment_changes(monkeypatch) -> None:
+    monkeypatch.setattr(auth_service.settings, "owner_password", "newownerpass456")
+    auth_service.initialize()
+
+    old_password_response = client.post(
+        "/api/v1/auth/sign-in",
+        json={
+            "email": "owner@example.com",
+            "password": "ownerpass123",
+        },
+    )
+    assert old_password_response.status_code == 401
+
+    new_password_response = client.post(
+        "/api/v1/auth/sign-in",
+        json={
+            "email": "owner@example.com",
+            "password": "newownerpass456",
+        },
+    )
+    assert new_password_response.status_code == 200
+    assert new_password_response.json()["user"]["role"] == "owner"
 
 
 def test_owner_can_approve_and_user_can_sign_in(owner_auth_headers) -> None:
