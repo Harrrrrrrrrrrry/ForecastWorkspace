@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Market Influence Model",
+  title: "Market Forecast Workspace",
   description: "Web platform for stock forecasting based on the Market Influence Model.",
 };
 
