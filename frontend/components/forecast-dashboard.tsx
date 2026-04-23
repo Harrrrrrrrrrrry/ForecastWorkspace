@@ -283,8 +283,11 @@ export function ForecastDashboard() {
       <section className="scene scene-hero">
         <div className="scene-overlay" />
         <header className="mission-nav">
-          <span className="nav-mark">Forecast Workspace</span>
+          <Link className="nav-mark" href="/">
+            Forecast Workspace
+          </Link>
           <div className="nav-links">
+            <Link href="/">Home</Link>
             {currentUser ? (
               <>
                 <span className="nav-user">

@@ -39,12 +39,12 @@ export function AuthForm({ mode }: AuthFormProps) {
         });
         const response = await signIn({ email, password });
         storeAuthSession(response.token, response.user);
-        router.push("/");
+        router.push("/dashboard");
         router.refresh();
       } else {
         const response = await signIn({ email, password });
         storeAuthSession(response.token, response.user);
-        router.push("/");
+        router.push("/dashboard");
         router.refresh();
       }
     } catch (submitError) {
@@ -136,7 +136,8 @@ export function AuthForm({ mode }: AuthFormProps) {
         </form>
 
         <div className="auth-footer">
-          <Link href="/">Back to dashboard</Link>
+          <Link href="/">Back to home</Link>
+          <Link href="/dashboard">Open dashboard</Link>
           <Link href={isSignUp ? "/sign-in" : "/sign-up"}>
             {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
           </Link>

@@ -1,5 +1,5 @@
-import { ForecastDashboard } from "@/components/forecast-dashboard";
+import { HomePageShell } from "@/components/home-page";
 
 export default function HomePage() {
-  return <ForecastDashboard />;
+  return <HomePageShell />;
 }
