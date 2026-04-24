@@ -60,7 +60,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     <main className="auth-page">
       <section className="auth-panel">
         <div className="auth-header">
-          <span className="scene-kicker">Access Control</span>
+          <span className="scene-kicker">Auth Page</span>
           <h1>{isSignUp ? "Create your account" : "Sign in to your account"}</h1>
           <p>
             {isSignUp
@@ -78,7 +78,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 maxLength={120}
                 name="fullName"
                 onChange={(event) => setFullName(event.target.value)}
-                placeholder="Jane Doe"
+                placeholder="Han Zhao"
                 type="text"
                 value={fullName}
               />
@@ -92,7 +92,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               className="parameter-input"
               name="email"
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="jane@example.com"
+              placeholder="Han@example.com"
               type="email"
               value={email}
             />
@@ -112,21 +112,6 @@ export function AuthForm({ mode }: AuthFormProps) {
             />
           </label>
 
-          {isSignUp ? (
-            <label className="field-block">
-              <span className="field-label">How will you use it?</span>
-              <textarea
-                className="parameter-input auth-textarea"
-                maxLength={500}
-                name="accessReason"
-                onChange={(event) => setAccessReason(event.target.value)}
-                placeholder="How will you use the forecasting and explanation features?"
-                rows={4}
-                value={accessReason}
-              />
-            </label>
-          ) : null}
-
           {error ? <div className="auth-status auth-status-error">{error}</div> : null}
           {success ? <div className="auth-status auth-status-success">{success}</div> : null}
 
@@ -137,7 +122,6 @@ export function AuthForm({ mode }: AuthFormProps) {
 
         <div className="auth-footer">
           <Link href="/">Back to home</Link>
-          <Link href="/dashboard">Open dashboard</Link>
           <Link href={isSignUp ? "/sign-in" : "/sign-up"}>
             {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
           </Link>

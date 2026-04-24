@@ -60,6 +60,29 @@ const FEATURE_TABS = [
   },
 ] as const;
 
+const MODEL_STACK = [
+  {
+    name: "Market Influence",
+    keywords: ["benchmark link", "beta projection", "core path"],
+  },
+  {
+    name: "Fourier",
+    keywords: ["cyclical signal", "price rhythm", "pattern fit"],
+  },
+  {
+    name: "ARIMA",
+    keywords: ["time series", "local fit", "trend memory"],
+  },
+  {
+    name: "XGBoost",
+    keywords: ["lag features", "return learning", "ml curve"],
+  },
+  {
+    name: "GPT-5.4-mini",
+    keywords: ["explanation layer", "plain language", "not prediction"],
+  },
+] as const;
+
 type FeatureTabId = (typeof FEATURE_TABS)[number]["id"];
 
 function formatCurrency(value: number | null): string {
@@ -290,8 +313,38 @@ export function HomePageShell() {
             </div>
           </div>
         </div>
+      </section>
+      <section className="landing-section landing-section-compact">
+        <div className="landing-models-panel landing-models-panel-standalone landing-reveal">
+          <div className="landing-section-head landing-models-head">
+            <h2 className="landing-section-title">Models behind the forecast</h2>
+            <p>
+              The platform predicts prices with mathematical and machine-learning models, then uses a
+              separate explanation layer to translate the result into readable language.
+            </p>
+          </div>
 
-        
+          <div className="landing-model-list">
+            {MODEL_STACK.map((model) => (
+              <article className="landing-model-card" key={model.name}>
+                <h3>{model.name}</h3>
+                <span aria-hidden="true" className="landing-model-divider" />
+                <p>{model.keywords.join(" / ")}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-section landing-section-compact">
+        <div className="landing-auth-cta landing-reveal">
+          <Link className="landing-auth-button landing-auth-button-secondary" href="/sign-in">
+            Sign In
+          </Link>
+          <Link className="landing-auth-button landing-auth-button-primary" href="/sign-up">
+            Sign Up
+          </Link>
+        </div>
       </section>
     </main>
   );
