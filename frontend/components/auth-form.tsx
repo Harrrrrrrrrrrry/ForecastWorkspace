@@ -58,15 +58,15 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <main className="auth-page">
+      <section className="auth-visual" aria-label="Forecast model formula">
+        <div className="auth-formula" aria-label="P final equals alpha P Fourier plus one minus alpha times current stock price times one plus beta benchmark return">
+          P<sub>final</sub> = αP<sub>Fourier</sub> + (1−α)P<sub>current</sub>(1+βR<sub>benchmark</sub>)
+        </div>
+      </section>
+
       <section className="auth-panel">
         <div className="auth-header">
-          <span className="scene-kicker">Auth Page</span>
           <h1>{isSignUp ? "Create your account" : "Sign in to your account"}</h1>
-          <p>
-            {isSignUp
-              ? "Create an account to start using forecasts and explanations immediately."
-              : "Sign in to run forecasts and use GPT-backed explanation endpoints."}
-          </p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>

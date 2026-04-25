@@ -279,7 +279,7 @@ export function ForecastDashboard() {
   const failedCount = forecastCards.filter((item) => item.error).length;
 
   return (
-    <main className="mission-shell">
+    <main className="mission-shell dashboard-shell">
       <section className="scene scene-hero">
         <div className="scene-overlay" />
         <header className="mission-nav">

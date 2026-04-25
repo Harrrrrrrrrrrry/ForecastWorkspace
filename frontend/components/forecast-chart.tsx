@@ -39,14 +39,14 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
   const series: LineSeries[] = [
     {
       label: "Historical Price",
-      color: "#f0f0fa",
+      color: "#111111",
       values: historical.map((point) => point.value),
       startIndex: 0,
       strokeWidth: 2.2,
     },
     {
       label: "Market Influence",
-      color: "#c9d1ff",
+      color: "#4f6fd9",
       values: [lastHistorical, ...forecast.final_combined_forecast.map((point) => point.value)],
       startIndex: Math.max(historical.length - 1, 0),
       dashed: true,
@@ -70,7 +70,7 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
     },
     {
       label: "Combined Forecast",
-      color: "#ffffff",
+      color: "#000000",
       values: [lastHistorical, ...forecast.ensemble_forecast.map((point) => point.value)],
       startIndex: Math.max(historical.length - 1, 0),
       strokeWidth: 3,
@@ -104,7 +104,7 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
     note: candidate.name,
     value: Math.max(candidate.correlation, 0),
     display: candidate.correlation.toFixed(4),
-    color: "#9eb7ff",
+    color: "#4f6fd9",
   }));
 
   return (
@@ -307,7 +307,7 @@ function buildGridLabels(minValue: number, maxValue: number, count: number): num
 
 function pickSeriesColor(modelId: string): string {
   if (modelId === "market_influence") {
-    return "#c9d1ff";
+    return "#4f6fd9";
   }
 
   if (modelId === "arima") {
@@ -318,7 +318,7 @@ function pickSeriesColor(modelId: string): string {
     return "#8fe6d8";
   }
 
-  return "#ffffff";
+  return "#111111";
 }
 
 function formatShortDate(value: string): string {
