@@ -1606,7 +1606,7 @@ input {
 
 .forecast-hero-layout {
   display: grid;
-  grid-template-columns: minmax(760px, 1.72fr) minmax(280px, 0.48fr);
+  grid-template-columns: minmax(0, 1.44fr) minmax(420px, 0.56fr);
   gap: clamp(28px, 4vw, 64px);
   align-items: start;
   width: min(100%, 1380px);
@@ -1645,9 +1645,9 @@ input {
 
 .forecast-side-copy h1 {
   margin: 0;
-  max-width: 5.5ch;
+  max-width: 100%;
   color: #111111;
-  font-size: clamp(3.6rem, 7vw, 6.1rem);
+  font-size: clamp(3.2rem, 5vw, 5rem);
   line-height: 0.9;
   letter-spacing: -0.06em;
   font-weight: 500;
@@ -1665,7 +1665,7 @@ input {
   display: flex;
   align-items: center;
   gap: 20px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .forecast-dashboard-link,
@@ -1792,6 +1792,12 @@ input {
   }
 }
 
+@media (max-width: 1240px) {
+  .forecast-hero-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1100px) {
   .hero-layout,
   .chart-dashboard,
@@ -1804,10 +1810,6 @@ input {
 
   .landing-model-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .forecast-hero-layout {
-    grid-template-columns: 1fr;
   }
 
   .forecast-side-panel {
