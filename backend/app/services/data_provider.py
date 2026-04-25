@@ -17,7 +17,9 @@ class HistoricalDataProvider:
             raise ValueError("Ticker must not be empty.")
 
         end_date = datetime.now(UTC)
-        start_date = end_date - timedelta(days=lookback_days + 10)
+        # Add a small calendar-day buffer so weekends and market holidays do not reduce
+        # the final trading-day window after we trim to the requested lookback length.
+        start_date = end_date - timedelta(days=lookback_days + 15)
 
         history = yf.download(
             normalized_ticker,
