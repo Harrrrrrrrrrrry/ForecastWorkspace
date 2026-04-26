@@ -1,6 +1,20 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
-const FORECAST_REQUEST_TIMEOUT_MS = 30_000;
+const DEFAULT_FORECAST_REQUEST_TIMEOUT_MS = 120_000;
+const FORECAST_REQUEST_TIMEOUT_MS = parseForecastTimeout(
+  process.env.NEXT_PUBLIC_FORECAST_REQUEST_TIMEOUT_MS,
+);
+
+function parseForecastTimeout(value: string | undefined): number {
+  if (!value) {
+    return DEFAULT_FORECAST_REQUEST_TIMEOUT_MS;
+  }
+
+  const parsedValue = Number.parseInt(value, 10);
+  return Number.isFinite(parsedValue) && parsedValue > 0
+    ? parsedValue
+    : DEFAULT_FORECAST_REQUEST_TIMEOUT_MS;
+}
 
 async function fetchWithTimeout(
   input: RequestInfo | URL,
@@ -225,7 +239,7 @@ export async function fetchForecast(
       }),
     },
     FORECAST_REQUEST_TIMEOUT_MS,
-    "Forecast request timed out after 30 seconds. Please try again.",
+    `Forecast request timed out after ${Math.round(FORECAST_REQUEST_TIMEOUT_MS / 1000)} seconds. Please try again.`,
   );
 
   if (!response.ok) {
