@@ -5,6 +5,7 @@ from app.services.auth import auth_service
 
 @pytest.fixture(autouse=True)
 def isolated_auth_db(tmp_path, monkeypatch):
+    monkeypatch.setattr(auth_service.settings, "database_url", None)
     monkeypatch.setattr(auth_service, "db_path", tmp_path / "auth.sqlite3")
     monkeypatch.setattr(auth_service.settings, "auth_token_ttl_days", 30)
     monkeypatch.setattr(auth_service.settings, "daily_query_limit", 50)

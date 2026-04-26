@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_env: str = Field(default="development", alias="APP_ENV")
     api_v1_prefix: str = Field(default="/api/v1", alias="API_V1_PREFIX")
     cors_origins_raw: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
+    database_url: str | None = Field(default=None, alias="DATABASE_URL")
     auth_db_path: str = Field(default="auth.sqlite3", alias="AUTH_DB_PATH")
     auth_token_ttl_days: int = Field(default=30, alias="AUTH_TOKEN_TTL_DAYS")
     daily_query_limit: int = Field(default=50, alias="DAILY_QUERY_LIMIT")
