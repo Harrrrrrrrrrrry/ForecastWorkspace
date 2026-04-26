@@ -23,7 +23,7 @@ def test_forecast_endpoint_returns_structured_response(monkeypatch, approved_aut
             "horizon_days": payload.horizon_days,
             "analysis_window": {
                 "start_date": "2026-01-01",
-                "end_date": "2026-03-31",
+                "end_date": payload.analysis_end_date or "2026-03-31",
                 "lookback_days": 60,
             },
             "historical_prices": [{"date": "2026-03-31", "value": 210.0}],
@@ -64,7 +64,12 @@ def test_forecast_endpoint_returns_structured_response(monkeypatch, approved_aut
     response = client.post(
         "/api/v1/forecast",
         headers=approved_auth_headers,
-        json={"ticker": "aapl", "horizon_days": 7, "analysis_window_days": 60},
+        json={
+            "ticker": "aapl",
+            "horizon_days": 7,
+            "analysis_window_days": 60,
+            "analysis_end_date": "2026-03-31",
+        },
     )
 
     assert response.status_code == 200
@@ -73,5 +78,6 @@ def test_forecast_endpoint_returns_structured_response(monkeypatch, approved_aut
     assert payload["benchmark_candidates"][0]["symbol"] == "^GSPC"
     assert payload["final_combined_forecast"][0]["value"] == 210.9
     assert payload["summary"]["current_price"] == 210.0
+    assert payload["analysis_window"]["end_date"] == "2026-03-31"
     assert payload["summary"]["current_price_date"] == "2026-03-31"
     assert payload["summary"]["predicted_price_change"] == 0.9

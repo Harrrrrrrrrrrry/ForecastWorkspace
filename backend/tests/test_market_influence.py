@@ -23,8 +23,16 @@ class FakeHistoricalDataProvider:
             "^RUT": pd.Series(russell_values, index=dates, dtype=float),
         }
 
-    def fetch_close_series(self, ticker: str, lookback_days: int) -> pd.Series:
-        return self.series_map[ticker.strip().upper()].tail(lookback_days)
+    def fetch_close_series(
+        self,
+        ticker: str,
+        lookback_days: int,
+        end_date: str | None = None,
+    ) -> pd.Series:
+        series = self.series_map[ticker.strip().upper()]
+        if end_date:
+            series = series[series.index.date <= pd.Timestamp(end_date).date()]
+        return series.tail(lookback_days)
 
 
 class FakeARIMAService:
@@ -102,6 +110,29 @@ def test_market_influence_model_returns_intermediate_outputs() -> None:
         response.summary.predicted_price - response.summary.current_price,
         4,
     )
+
+
+def test_market_influence_model_uses_requested_analysis_end_date() -> None:
+    service = MarketInfluenceModelService(
+        data_provider=FakeHistoricalDataProvider(),
+        fourier_service=FourierForecastService(max_harmonics=3),
+        arima_service=FakeARIMAService(),
+        ml_service=FakeMLService(),
+        ensemble_service=EnsembleForecastService(),
+    )
+
+    response = service.run(
+        ForecastRequest(
+            ticker="AAPL",
+            horizon_days=5,
+            analysis_window_days=60,
+            analysis_end_date="2025-03-31",
+        )
+    )
+
+    assert response.analysis_window.end_date == "2025-03-31"
+    assert response.summary.current_price_date == "2025-03-31"
+    assert response.stock_fourier_forecast[0].date == "2025-04-01"
 
 
 def test_market_influence_model_applies_fallback_for_unrealistic_forecast() -> None:

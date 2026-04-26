@@ -38,6 +38,7 @@ export function ForecastDashboard() {
   const [tickerInput, setTickerInput] = useState("");
   const [forecastDays, setForecastDays] = useState(`${DEFAULT_HORIZON}`);
   const [analysisWindowDays, setAnalysisWindowDays] = useState(`${DEFAULT_WINDOW}`);
+  const [analysisEndDate, setAnalysisEndDate] = useState("");
   const [forecastCards, setForecastCards] = useState<ForecastCardState[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -97,6 +98,7 @@ export function ForecastDashboard() {
     tickers: string[],
     horizonDays: number,
     windowDays: number,
+    windowEndDate: string,
   ) {
     setIsLoading(true);
     setError(null);
@@ -104,7 +106,13 @@ export function ForecastDashboard() {
     const responses = await Promise.all(
       tickers.map(async (ticker) => {
         try {
-          const forecast = await fetchForecast(ticker, token, horizonDays, windowDays);
+          const forecast = await fetchForecast(
+            ticker,
+            token,
+            horizonDays,
+            windowDays,
+            windowEndDate || undefined,
+          );
           return {
             ticker,
             forecast,
@@ -150,6 +158,11 @@ export function ForecastDashboard() {
       return;
     }
 
+    if (analysisEndDate && analysisEndDate > getTodayInputDate()) {
+      setError("Window end date cannot be in the future.");
+      return;
+    }
+
     if (!authToken) {
       setError("Sign in to run forecasts and GPT explanations.");
       return;
@@ -157,7 +170,13 @@ export function ForecastDashboard() {
 
     setSelectedTickers(tickers);
     setTickerInput("");
-    await loadForecasts(authToken, tickers, parsedForecastDays, parsedAnalysisWindowDays);
+    await loadForecasts(
+      authToken,
+      tickers,
+      parsedForecastDays,
+      parsedAnalysisWindowDays,
+      analysisEndDate,
+    );
   }
 
   function handleTickerInputChange(value: string) {
@@ -375,6 +394,18 @@ export function ForecastDashboard() {
                     value={analysisWindowDays}
                   />
                 </label>
+
+                <label className="field-block">
+                  <span className="field-label">Window end date</span>
+                  <input
+                    className="parameter-input"
+                    max={getTodayInputDate()}
+                    name="analysisEndDate"
+                    onChange={(event) => setAnalysisEndDate(event.target.value)}
+                    type="date"
+                    value={analysisEndDate}
+                  />
+                </label>
               </div>
 
               <div className="hero-actions">
@@ -387,7 +418,7 @@ export function ForecastDashboard() {
                 </span>
                 <span className="hero-meta">
                   Press Enter or comma to add tickers. Window {analysisWindowDays || "--"} days /
-                  Horizon {forecastDays || "--"} days
+                  End {analysisEndDate || "latest available"} / Horizon {forecastDays || "--"} days
                 </span>
               </div>
             </form>
@@ -429,6 +460,7 @@ export function ForecastDashboard() {
             <div className="overview-column">
               <SummaryCard label="Forecast Horizon" value={`${forecastDays || "--"} days`} />
               <SummaryCard label="Analysis Window" value={`${analysisWindowDays || "--"} days`} />
+              <SummaryCard label="Window End" value={analysisEndDate || "Latest available"} />
               <SummaryCard label="Models Used" value="Market Influence, ARIMA, XGBoost" />
             </div>
           </div>
@@ -767,6 +799,14 @@ function parsePositiveInteger(value: string): number | null {
   }
 
   return parsed;
+}
+
+function getTodayInputDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = `${now.getMonth() + 1}`.padStart(2, "0");
+  const day = `${now.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function findWeight(forecast: ForecastResponse | null, modelId: string): number | null {

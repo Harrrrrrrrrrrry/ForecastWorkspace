@@ -222,7 +222,23 @@ export async function fetchForecast(
   token: string,
   horizonDays = 14,
   analysisWindowDays = 180,
+  analysisEndDate?: string,
 ): Promise<ForecastResponse> {
+  const requestBody: {
+    ticker: string;
+    horizon_days: number;
+    analysis_window_days: number;
+    analysis_end_date?: string;
+  } = {
+    ticker: ticker.trim().toUpperCase(),
+    horizon_days: horizonDays,
+    analysis_window_days: analysisWindowDays,
+  };
+
+  if (analysisEndDate) {
+    requestBody.analysis_end_date = analysisEndDate;
+  }
+
   const response = await fetchWithTimeout(
     `${API_BASE_URL}/forecast`,
     {
@@ -232,11 +248,7 @@ export async function fetchForecast(
         "Content-Type": "application/json",
       },
       cache: "no-store",
-      body: JSON.stringify({
-        ticker: ticker.trim().toUpperCase(),
-        horizon_days: horizonDays,
-        analysis_window_days: analysisWindowDays,
-      }),
+      body: JSON.stringify(requestBody),
     },
     FORECAST_REQUEST_TIMEOUT_MS,
     `Forecast request timed out after ${Math.round(FORECAST_REQUEST_TIMEOUT_MS / 1000)} seconds. Please try again.`,

@@ -1,4 +1,6 @@
-from pydantic import BaseModel, Field
+from datetime import UTC, date, datetime
+
+from pydantic import BaseModel, Field, field_validator
 from typing import Literal
 
 
@@ -11,6 +13,26 @@ class ForecastRequest(BaseModel):
         le=730,
         description="Number of trading days to use in the recent analysis window.",
     )
+    analysis_end_date: str | None = Field(
+        default=None,
+        description="Optional YYYY-MM-DD date to cap the analysis window. Empty uses latest available data.",
+    )
+
+    @field_validator("analysis_end_date")
+    @classmethod
+    def validate_analysis_end_date(cls, value: str | None) -> str | None:
+        if value is None or value.strip() == "":
+            return None
+
+        try:
+            parsed_date = date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError("analysis_end_date must use YYYY-MM-DD format.") from exc
+
+        if parsed_date > datetime.now(UTC).date():
+            raise ValueError("analysis_end_date cannot be in the future.")
+
+        return parsed_date.isoformat()
 
 
 class PricePoint(BaseModel):

@@ -48,6 +48,7 @@ class MarketInfluenceModelService:
         stock_series = self.data_provider.fetch_close_series(
             ticker=normalized_ticker,
             lookback_days=payload.analysis_window_days,
+            end_date=payload.analysis_end_date,
         )
 
         benchmark_correlations: list[BenchmarkCandidate] = []
@@ -60,6 +61,7 @@ class MarketInfluenceModelService:
                 benchmark_series = self.data_provider.fetch_close_series(
                     ticker=benchmark.symbol,
                     lookback_days=payload.analysis_window_days,
+                    end_date=payload.analysis_end_date,
                 )
                 aligned_stock_returns, aligned_benchmark_returns = self._align_returns(
                     stock_series=stock_series,
