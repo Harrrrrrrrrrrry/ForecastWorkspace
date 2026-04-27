@@ -113,6 +113,15 @@ class EnsembleComponent(BaseModel):
     detail: str | None = None
 
 
+class FourierOverlay(BaseModel):
+    trend_line: list[PricePoint] = Field(default_factory=list)
+    fourier_model: list[PricePoint] = Field(default_factory=list)
+    error_upper_bound: list[PricePoint] = Field(default_factory=list)
+    error_lower_bound: list[PricePoint] = Field(default_factory=list)
+    error_margin: float | None = None
+    error_method: str | None = None
+
+
 class ForecastResponse(BaseModel):
     ticker: str
     horizon_days: int
@@ -128,6 +137,7 @@ class ForecastResponse(BaseModel):
     ml_forecast: list[PricePoint] = Field(default_factory=list)
     ensemble_forecast: list[PricePoint] = Field(default_factory=list)
     ensemble_components: list[EnsembleComponent] = Field(default_factory=list)
+    fourier_overlay: FourierOverlay = Field(default_factory=FourierOverlay)
     diagnostics: ModelDiagnostics
     summary: ForecastSummary
     warning_banner: WarningBanner | None = None

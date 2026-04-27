@@ -533,6 +533,37 @@ input {
   margin-top: 16px;
 }
 
+.hero-status-row {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hero-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 1px solid var(--line-muted);
+  border-radius: 999px;
+  background: rgba(240, 240, 250, 0.04);
+  color: var(--copy-dim);
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.hero-status-pill strong {
+  color: var(--spectral-white);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-status-pill-success strong {
+  color: var(--success);
+}
+
 .ghost-button {
   border: 1px solid var(--ghost-border);
   border-radius: 32px;
@@ -615,6 +646,10 @@ input {
 .summary-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-self: stretch;
+}
+
+.summary-grid-primary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .summary-card,
@@ -817,7 +852,7 @@ input {
 
 .chart-dashboard {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
   align-items: start;
 }
@@ -829,7 +864,7 @@ input {
 }
 
 .chart-panel-large {
-  grid-row: span 2;
+  grid-column: 1 / -1;
 }
 
 .panel-header {
@@ -861,6 +896,112 @@ input {
   white-space: nowrap;
 }
 
+.chart-header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chart-detail-toggle {
+  border: 1px solid rgba(240, 240, 250, 0.2);
+  border-radius: 999px;
+  background: rgba(240, 240, 250, 0.08);
+  color: var(--copy-muted);
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.chart-detail-toggle:hover:not(:disabled),
+.chart-detail-toggle[aria-pressed="true"] {
+  border-color: rgba(216, 58, 52, 0.56);
+  background: rgba(216, 58, 52, 0.16);
+  color: var(--spectral-white);
+}
+
+.chart-detail-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.forecast-price-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 12px;
+  scrollbar-color: rgba(240, 240, 250, 0.24) transparent;
+  scrollbar-width: thin;
+}
+
+.forecast-price-card {
+  flex: 0 0 148px;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid rgba(240, 240, 250, 0.14);
+  border-radius: 8px;
+  background: rgba(240, 240, 250, 0.045);
+  padding: 10px 12px;
+}
+
+.forecast-price-card-positive {
+  border-color: rgba(67, 190, 115, 0.42);
+  background: rgba(67, 190, 115, 0.1);
+}
+
+.forecast-price-card-negative {
+  border-color: rgba(224, 82, 77, 0.46);
+  background: rgba(224, 82, 77, 0.1);
+}
+
+.forecast-price-card-neutral {
+  border-color: rgba(240, 240, 250, 0.14);
+}
+
+.forecast-price-date {
+  color: var(--copy-dim);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.forecast-price-value {
+  color: var(--spectral-white);
+  font-size: 0.94rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.forecast-price-change {
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.forecast-price-card-positive .forecast-price-change {
+  color: #60d88f;
+}
+
+.forecast-price-card-negative .forecast-price-change {
+  color: #ff817b;
+}
+
+.forecast-price-card-neutral .forecast-price-change {
+  color: var(--copy-dim);
+}
+
 .chart-svg {
   width: 100%;
   height: auto;
@@ -884,6 +1025,11 @@ input {
   stroke: rgba(240, 240, 250, 0.2);
   stroke-width: 1.5;
   stroke-dasharray: 8 10;
+}
+
+.chart-error-band {
+  fill: rgba(216, 58, 52, 0.12);
+  stroke: none;
 }
 
 .chart-axis-text,
@@ -970,6 +1116,12 @@ input {
 .legend-swatch {
   width: 18px;
   height: 2px;
+}
+
+.legend-swatch-band {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(216, 58, 52, 0.24);
 }
 
 .data-grid {
@@ -1148,10 +1300,39 @@ input {
   border-color: rgba(17, 17, 17, 0.14);
 }
 
+.dashboard-shell .hero-layout {
+  grid-template-columns: minmax(0, 900px);
+  justify-content: center;
+}
+
+.dashboard-shell .hero-copy {
+  justify-self: center;
+  width: min(100%, 900px);
+  justify-items: center;
+  text-align: center;
+}
+
+.dashboard-shell .hero-copy p {
+  max-width: none;
+}
+
+.dashboard-shell .hero-form,
+.dashboard-shell .field-block,
+.dashboard-shell .ticker-input-shell,
+.dashboard-shell .parameter-grid {
+  width: 100%;
+}
+
+.dashboard-shell .hero-form .field-label {
+  justify-self: center;
+  text-align: center;
+}
+
 .dashboard-shell .ticker-input-shell,
 .dashboard-shell .parameter-input,
 .dashboard-shell .stock-chip,
 .dashboard-shell .ghost-button,
+.dashboard-shell .hero-status-pill,
 .dashboard-shell .summary-card,
 .dashboard-shell .data-column,
 .dashboard-shell .notes-block,
@@ -1216,6 +1397,19 @@ input {
 .dashboard-shell .chart-axis-text,
 .dashboard-shell .chart-phase-text {
   fill: rgba(17, 17, 17, 0.62);
+}
+
+.dashboard-shell .chart-detail-toggle {
+  border-color: rgba(17, 17, 17, 0.12);
+  background: rgba(17, 17, 17, 0.05);
+  color: rgba(17, 17, 17, 0.64);
+}
+
+.dashboard-shell .chart-detail-toggle:hover:not(:disabled),
+.dashboard-shell .chart-detail-toggle[aria-pressed="true"] {
+  border-color: rgba(216, 58, 52, 0.36);
+  background: rgba(216, 58, 52, 0.1);
+  color: #111111;
 }
 
 .dashboard-shell .metric-bar-track {
@@ -2118,6 +2312,10 @@ input {
 
   .panel-header {
     flex-direction: column;
+  }
+
+  .chart-header-actions {
+    justify-content: flex-start;
   }
 
   .metric-bar-header {
