@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { ForecastResponse } from "@/lib/api";
 
 type ForecastChartProps = {
@@ -23,6 +25,13 @@ type BarDatum = {
   color: string;
 };
 
+type ForecastPriceDatum = {
+  date: string;
+  price: number;
+  change: number | null;
+  tone: "positive" | "negative" | "neutral";
+};
+
 const LINE_CHART_WIDTH = 1280;
 const LINE_CHART_HEIGHT = 420;
 const LINE_CHART_LEFT = 88;
@@ -31,10 +40,18 @@ const LINE_CHART_TOP = 28;
 const LINE_CHART_BOTTOM = 52;
 
 export function ForecastChart({ forecast }: ForecastChartProps) {
+  const [showModelDetails, setShowModelDetails] = useState(false);
   const historical = forecast.historical_prices;
   const lastHistorical = historical.at(-1)?.value ?? 0;
   const futurePointCount = forecast.ensemble_forecast.length;
   const totalPoints = historical.length + futurePointCount;
+  const overlay = forecast.fourier_overlay;
+  const hasOverlay =
+    overlay.trend_line.length === totalPoints &&
+    overlay.fourier_model.length === totalPoints &&
+    overlay.error_upper_bound.length === totalPoints &&
+    overlay.error_lower_bound.length === totalPoints;
+  const overlayEnabled = showModelDetails && hasOverlay;
 
   const series: LineSeries[] = [
     {
@@ -77,7 +94,33 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
     },
   ].filter((item) => item.values.length > 1);
 
-  const allValues = series.flatMap((item) => item.values);
+  const overlaySeries: LineSeries[] = overlayEnabled
+    ? [
+        {
+          label: "Trend Line",
+          color: "#7a8494",
+          values: overlay.trend_line.map((point) => point.value),
+          startIndex: 0,
+          dashed: true,
+          strokeWidth: 2,
+        },
+        {
+          label: "Fourier Model",
+          color: "#d83a34",
+          values: overlay.fourier_model.map((point) => point.value),
+          startIndex: 0,
+          strokeWidth: 2.6,
+        },
+      ]
+    : [];
+  const errorUpperValues = overlay.error_upper_bound.map((point) => point.value);
+  const errorLowerValues = overlay.error_lower_bound.map((point) => point.value);
+  const allValues = [
+    ...series.flatMap((item) => item.values),
+    ...(overlayEnabled ? overlaySeries.flatMap((item) => item.values) : []),
+    ...(overlayEnabled ? errorUpperValues : []),
+    ...(overlayEnabled ? errorLowerValues : []),
+  ];
   const minValue = Math.min(...allValues);
   const maxValue = Math.max(...allValues);
   const valueRange = maxValue - minValue || 1;
@@ -107,6 +150,19 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
     color: "#4f6fd9",
   }));
 
+  const dailyForecastPrices: ForecastPriceDatum[] = forecast.ensemble_forecast.map((point, index) => {
+    const comparisonValue =
+      index === 0 ? historical.at(-1)?.value : forecast.ensemble_forecast[index - 1]?.value;
+    const change = comparisonValue == null ? null : point.value - comparisonValue;
+
+    return {
+      date: point.date,
+      price: point.value,
+      change,
+      tone: getForecastPriceTone(change),
+    };
+  });
+
   return (
     <section className="scene-chart">
       <div className="scene-heading">
@@ -123,8 +179,35 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
                 Historical prices and forecast paths shown on a single time axis.
               </p>
             </div>
-            <span className="panel-meta">{forecast.horizon_days} day forecast horizon</span>
+            <div className="chart-header-actions">
+              <span className="panel-meta">{forecast.horizon_days} day forecast horizon</span>
+              <button
+                aria-pressed={overlayEnabled}
+                className="chart-detail-toggle"
+                disabled={!hasOverlay}
+                onClick={() => setShowModelDetails((current) => !current)}
+                title={overlay.error_method ?? "Show Fourier trend and residual band"}
+                type="button"
+              >
+                Model Details
+              </button>
+            </div>
           </div>
+
+          {dailyForecastPrices.length > 0 ? (
+            <div className="forecast-price-strip" aria-label="Daily predicted closing prices">
+              {dailyForecastPrices.map((point, index) => (
+                <div
+                  className={`forecast-price-card forecast-price-card-${point.tone}`}
+                  key={`${point.date}-${index}`}
+                >
+                  <span className="forecast-price-date">{formatShortDate(point.date)}</span>
+                  <span className="forecast-price-value">{formatCurrency(point.price)}</span>
+                  <span className="forecast-price-change">{formatSignedCurrency(point.change)}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           <svg
             aria-label="Price forecast timeline"
@@ -171,7 +254,27 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
               Forecast Start
             </text>
 
+            {overlayEnabled ? (
+              <path
+                className="chart-error-band"
+                d={buildAreaPath(errorUpperValues, errorLowerValues, 0, xSpan, yMin, yMax)}
+              />
+            ) : null}
+
             {series.map((item) => (
+              <path
+                key={item.label}
+                d={buildLinePath(item.values, item.startIndex, xSpan, yMin, yMax)}
+                fill="none"
+                stroke={item.color}
+                strokeDasharray={item.dashed ? "10 10" : undefined}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={item.strokeWidth ?? 2}
+              />
+            ))}
+
+            {overlaySeries.map((item) => (
               <path
                 key={item.label}
                 d={buildLinePath(item.values, item.startIndex, xSpan, yMin, yMax)}
@@ -190,12 +293,18 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
           </svg>
 
           <div className="chart-legend">
-            {series.map((item) => (
+            {[...series, ...overlaySeries].map((item) => (
               <div className="legend-item" key={item.label}>
                 <span className="legend-swatch" style={{ backgroundColor: item.color }} />
                 <span>{item.label}</span>
               </div>
             ))}
+            {overlayEnabled ? (
+              <div className="legend-item">
+                <span className="legend-swatch legend-swatch-band" />
+                <span>Error Bound</span>
+              </div>
+            ) : null}
           </div>
         </article>
 
@@ -287,6 +396,34 @@ function buildLinePath(
     .join(" ");
 }
 
+function buildAreaPath(
+  upperValues: number[],
+  lowerValues: number[],
+  startIndex: number,
+  xSpan: number,
+  yMin: number,
+  yMax: number,
+): string {
+  if (upperValues.length === 0 || upperValues.length !== lowerValues.length) {
+    return "";
+  }
+
+  const upperPath = upperValues.map((value, index) => {
+    const x = scaleLineX(startIndex + index, xSpan);
+    const y = scaleLineY(value, yMin, yMax);
+    return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+  });
+  const lowerPath = lowerValues
+    .map((value, index) => {
+      const x = scaleLineX(startIndex + index, xSpan);
+      const y = scaleLineY(value, yMin, yMax);
+      return `L ${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .reverse();
+
+  return [...upperPath, ...lowerPath, "Z"].join(" ");
+}
+
 function scaleLineX(index: number, xSpan: number): number {
   const usableWidth = LINE_CHART_WIDTH - LINE_CHART_LEFT - LINE_CHART_RIGHT;
   return LINE_CHART_LEFT + (index / Math.max(xSpan, 1)) * usableWidth;
@@ -339,6 +476,22 @@ function formatCurrency(value: number | null): string {
   }
 
   return `${value.toFixed(2)} USD`;
+}
+
+function formatSignedCurrency(value: number | null): string {
+  if (value == null) {
+    return "Unavailable";
+  }
+
+  return `${value >= 0 ? "+" : ""}${value.toFixed(2)} USD`;
+}
+
+function getForecastPriceTone(value: number | null): "positive" | "negative" | "neutral" {
+  if (value == null || value === 0) {
+    return "neutral";
+  }
+
+  return value > 0 ? "positive" : "negative";
 }
 
 function formatPercentValue(value: number, digits: number, suffix: string): string {

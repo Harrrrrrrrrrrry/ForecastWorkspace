@@ -132,6 +132,15 @@ export type EnsembleComponent = {
   detail?: string | null;
 };
 
+export type FourierOverlay = {
+  trend_line: PricePoint[];
+  fourier_model: PricePoint[];
+  error_upper_bound: PricePoint[];
+  error_lower_bound: PricePoint[];
+  error_margin: number | null;
+  error_method: string | null;
+};
+
 export type ForecastResponse = {
   ticker: string;
   horizon_days: number;
@@ -147,6 +156,7 @@ export type ForecastResponse = {
   ml_forecast: PricePoint[];
   ensemble_forecast: PricePoint[];
   ensemble_components: EnsembleComponent[];
+  fourier_overlay: FourierOverlay;
   diagnostics: ModelDiagnostics;
   summary: ForecastSummary;
   warning_banner: WarningBanner | null;

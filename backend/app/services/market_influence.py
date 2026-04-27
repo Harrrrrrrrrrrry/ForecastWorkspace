@@ -11,6 +11,7 @@ from app.models.schemas import (
     ForecastRequest,
     ForecastResponse,
     ForecastSummary,
+    FourierOverlay,
     ModelDiagnostics,
     PricePoint,
     WarningBanner,
@@ -146,6 +147,11 @@ class MarketInfluenceModelService:
         benchmark_projected_forecast = self._forecast_to_points(future_dates, benchmark_projected_prices)
         index_based_forecast = self._forecast_to_points(future_dates, index_based_prices)
         final_combined_forecast = self._forecast_to_points(future_dates, reliability.final_prices)
+        fourier_overlay = self._build_fourier_overlay(
+            stock_series=stock_series,
+            future_dates=future_dates,
+            fourier_result=stock_fourier_result,
+        )
 
         arima_result = self.arima_service.forecast(
             series=stock_series,
@@ -216,6 +222,7 @@ class MarketInfluenceModelService:
             ml_forecast=ml_forecast,
             ensemble_forecast=ensemble_forecast,
             ensemble_components=ensemble_components,
+            fourier_overlay=fourier_overlay,
             diagnostics=ModelDiagnostics(
                 analysis_method="Pearson correlation on aligned daily returns.",
                 selected_benchmark_symbol=selected_candidate.symbol,
@@ -349,6 +356,39 @@ class MarketInfluenceModelService:
             PricePoint(date=date.strftime("%Y-%m-%d"), value=round(float(value), 4))
             for date, value in zip(dates, values, strict=True)
         ]
+
+    def _build_fourier_overlay(
+        self,
+        stock_series: pd.Series,
+        future_dates: list[pd.Timestamp],
+        fourier_result,
+    ) -> FourierOverlay:
+        overlay_dates = [pd.Timestamp(index) for index in stock_series.index] + future_dates
+
+        return FourierOverlay(
+            trend_line=self._overlay_to_points(overlay_dates, getattr(fourier_result, "trend_line", [])),
+            fourier_model=self._overlay_to_points(overlay_dates, getattr(fourier_result, "fourier_model", [])),
+            error_upper_bound=self._overlay_to_points(
+                overlay_dates,
+                getattr(fourier_result, "error_upper_bound", []),
+            ),
+            error_lower_bound=self._overlay_to_points(
+                overlay_dates,
+                getattr(fourier_result, "error_lower_bound", []),
+            ),
+            error_margin=getattr(fourier_result, "error_margin", None),
+            error_method=getattr(fourier_result, "error_method", None),
+        )
+
+    def _overlay_to_points(
+        self,
+        dates: list[pd.Timestamp],
+        values: list[float],
+    ) -> list[PricePoint]:
+        if len(values) != len(dates):
+            return []
+
+        return self._forecast_to_points(dates, values)
 
     def _generate_future_dates(self, last_date: pd.Timestamp, horizon_days: int) -> list[pd.Timestamp]:
         future_index = pd.date_range(last_date + BDay(1), periods=horizon_days, freq=BDay())

@@ -10,6 +10,12 @@ import pandas as pd
 class FourierForecastResult:
     forecast_values: list[float]
     harmonics_used: int
+    trend_line: list[float]
+    fourier_model: list[float]
+    error_upper_bound: list[float]
+    error_lower_bound: list[float]
+    error_margin: float
+    error_method: str
 
 
 class FourierForecastService:
@@ -53,8 +59,23 @@ class FourierForecastService:
         future_x = np.arange(len(values), len(values) + horizon_days, dtype=float)
         future_trend = np.polyval(trend_coefficients, future_x)
         forecast_values = np.maximum(future_trend + future_periodic, 0.01)
+        historical_model = np.maximum(trend + periodic_component, 0.01)
+        full_trend_x = np.arange(len(values) + horizon_days, dtype=float)
+        full_trend = np.polyval(trend_coefficients, full_trend_x)
+        full_fourier_model = np.concatenate([historical_model, forecast_values])
+
+        residuals = values - historical_model
+        error_margin = float(1.96 * np.sqrt(np.mean(np.square(residuals))))
+        error_upper_bound = full_fourier_model + error_margin
+        error_lower_bound = np.maximum(full_fourier_model - error_margin, 0.01)
 
         return FourierForecastResult(
             forecast_values=[round(float(value), 4) for value in forecast_values],
             harmonics_used=harmonics_used,
+            trend_line=[round(float(value), 4) for value in full_trend],
+            fourier_model=[round(float(value), 4) for value in full_fourier_model],
+            error_upper_bound=[round(float(value), 4) for value in error_upper_bound],
+            error_lower_bound=[round(float(value), 4) for value in error_lower_bound],
+            error_margin=round(error_margin, 4),
+            error_method="Approximate 95% historical residual band using 1.96 * RMSE.",
         )

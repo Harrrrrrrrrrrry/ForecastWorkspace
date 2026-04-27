@@ -65,6 +65,24 @@ class FakeMLService:
         )
 
 
+def test_fourier_service_returns_full_overlay_curves() -> None:
+    dates = pd.bdate_range("2025-01-01", periods=40)
+    values = [1.25 + (index * 0.02) + ((index % 4) - 1.5) * 0.08 for index in range(len(dates))]
+    series = pd.Series(values, index=dates, dtype=float)
+
+    result = FourierForecastService(max_harmonics=3).forecast(series=series, horizon_days=6)
+
+    expected_overlay_length = len(series) + 6
+    assert len(result.forecast_values) == 6
+    assert len(result.trend_line) == expected_overlay_length
+    assert len(result.fourier_model) == expected_overlay_length
+    assert len(result.error_upper_bound) == expected_overlay_length
+    assert len(result.error_lower_bound) == expected_overlay_length
+    assert min(result.error_lower_bound) >= 0.01
+    assert result.error_margin >= 0.0
+    assert "1.96 * RMSE" in result.error_method
+
+
 def test_market_influence_model_returns_intermediate_outputs() -> None:
     service = MarketInfluenceModelService(
         data_provider=FakeHistoricalDataProvider(),
@@ -94,6 +112,12 @@ def test_market_influence_model_returns_intermediate_outputs() -> None:
     assert len(response.ml_forecast) == 10
     assert len(response.ensemble_forecast) == 10
     assert len(response.ensemble_components) == 3
+    assert len(response.fourier_overlay.trend_line) == 70
+    assert len(response.fourier_overlay.fourier_model) == 70
+    assert len(response.fourier_overlay.error_upper_bound) == 70
+    assert len(response.fourier_overlay.error_lower_bound) == 70
+    assert min(point.value for point in response.fourier_overlay.error_lower_bound) >= 0.01
+    assert response.fourier_overlay.error_method is not None
     assert response.diagnostics.fourier_harmonics_used == 3
     assert response.diagnostics.arima_order == "(1, 1, 1)"
     assert response.diagnostics.ml_training_samples == 48

@@ -295,7 +295,6 @@ export function ForecastDashboard() {
   }
 
   const successfulCount = forecastCards.filter((item) => item.forecast).length;
-  const failedCount = forecastCards.filter((item) => item.error).length;
 
   return (
     <main className="mission-shell dashboard-shell">
@@ -412,10 +411,16 @@ export function ForecastDashboard() {
                 <button className="ghost-button" disabled={isLoading || !authToken} type="submit">
                   {isLoading ? "Running forecasts" : "Run forecasts"}
                 </button>
-                <span className="hero-meta">
-                  Run forecasts after signing in. GPT explanations are limited to 50 requests per
-                  day for each account.
-                </span>
+                <div className="hero-status-row" aria-label="Forecast request status">
+                  <span className="hero-status-pill">
+                    <span>Requested</span>
+                    <strong>{selectedTickers.length}</strong>
+                  </span>
+                  <span className="hero-status-pill hero-status-pill-success">
+                    <span>Success</span>
+                    <strong>{successfulCount}</strong>
+                  </span>
+                </div>
                 <span className="hero-meta">
                   Press Enter or comma to add tickers. Window {analysisWindowDays || "--"} days /
                   End {analysisEndDate || "latest available"} / Horizon {forecastDays || "--"} days
@@ -440,29 +445,6 @@ export function ForecastDashboard() {
                 ))}
               </div>
             ) : null}
-          </div>
-
-          <div className="overview-grid">
-            <div className="overview-column">
-              <StatusSummaryCard
-                label="Requested Tickers"
-                tone="warning"
-                value={`${selectedTickers.length}`}
-              />
-              <StatusSummaryCard label="Failed Forecasts" tone="danger" value={`${failedCount}`} />
-              <StatusSummaryCard
-                label="Successful Forecasts"
-                tone="success"
-                value={`${successfulCount}`}
-              />
-            </div>
-
-            <div className="overview-column">
-              <SummaryCard label="Forecast Horizon" value={`${forecastDays || "--"} days`} />
-              <SummaryCard label="Analysis Window" value={`${analysisWindowDays || "--"} days`} />
-              <SummaryCard label="Window End" value={analysisEndDate || "Latest available"} />
-              <SummaryCard label="Models Used" value="Market Influence, ARIMA, XGBoost" />
-            </div>
           </div>
         </div>
       </section>
@@ -536,7 +518,7 @@ function StockForecastBoard({
             </div>
           ) : null}
 
-          <div className="summary-grid">
+          <div className="summary-grid summary-grid-primary">
             <SummaryCard
               detail={
                 summary?.current_price_date
@@ -562,72 +544,9 @@ function StockForecastBoard({
                 summary?.predicted_percent_change,
               )}
             />
-            <SummaryCard
-              label="Selected Benchmark"
-              value={summary?.selected_benchmark ?? "Waiting for forecast"}
-            />
-            <SummaryCard label="Confidence" value={formatScore(summary?.confidence_score)} />
-            <SummaryCard
-              label="Core Weight"
-              value={formatWeight(findWeight(forecast, "market_influence"))}
-            />
-            <SummaryCard
-              label="Warning Status"
-              value={summary?.warning_status ?? "No warnings"}
-            />
           </div>
 
           <ForecastChart forecast={forecast} />
-
-          <div className="data-grid">
-            <section className="data-column">
-              <div className="scene-heading">
-                <span className="scene-kicker">Model Components</span>
-                <h2>Each model contributes to the final forecast output.</h2>
-              </div>
-              <div className="manifest-list">
-                {forecast.ensemble_components.map((component) => (
-                  <article className="manifest-row" key={component.model_id}>
-                    <div>
-                      <span className="manifest-label">{component.display_name}</span>
-                      <p className="manifest-detail">
-                        Status {component.status}
-                        {component.detail ? ` / ${component.detail}` : ""}
-                      </p>
-                    </div>
-                    <div className="manifest-values">
-                      <span>{formatWeight(component.weight)}</span>
-                      <span>{formatCurrency(component.terminal_price)}</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="data-column">
-              <div className="scene-heading">
-                <span className="scene-kicker">Benchmark Selection</span>
-                <h2>Benchmark candidates ranked by historical correlation.</h2>
-              </div>
-              <div className="rank-list">
-                {forecast.benchmark_candidates.map((candidate, index) => (
-                  <div className="rank-row" key={candidate.symbol}>
-                    <span aria-hidden="true" className="rank-icon">
-                      <span className="rank-icon-core" />
-                    </span>
-                    <div className="rank-content">
-                      <span className="rank-name">{candidate.name}</span>
-                      <span className="rank-symbol">{candidate.symbol}</span>
-                      <div className="rank-metrics">
-                        <span className="rank-position">No. {String(index + 1).padStart(2, "0")}</span>
-                        <span className="rank-score">{candidate.correlation.toFixed(4)}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
 
           <div className="notes-grid">
             <section className="notes-block">
@@ -737,26 +656,6 @@ function SummaryCard({
       <span className="summary-label">{label}</span>
       <span className={valueClassName}>{value}</span>
       {detail ? <span className="summary-detail">{detail}</span> : null}
-    </div>
-  );
-}
-
-function StatusSummaryCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: "warning" | "success" | "danger";
-}) {
-  return (
-    <div className={`summary-card summary-card-status summary-card-${tone}`}>
-      <span className="summary-label summary-label-status">
-        <span aria-hidden="true" className="summary-status-dot" />
-        <span>{label}</span>
-      </span>
-      <span className="summary-value summary-value-status">{value}</span>
     </div>
   );
 }
