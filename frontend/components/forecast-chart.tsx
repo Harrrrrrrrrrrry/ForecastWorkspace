@@ -38,6 +38,7 @@ const LINE_CHART_LEFT = 88;
 const LINE_CHART_RIGHT = 40;
 const LINE_CHART_TOP = 28;
 const LINE_CHART_BOTTOM = 52;
+const MIN_AXIS_LABEL_GAP = 110;
 
 export function ForecastChart({ forecast }: ForecastChartProps) {
   const [showModelDetails, setShowModelDetails] = useState(false);
@@ -130,9 +131,15 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
   const gridLabels = buildGridLabels(yMin, yMax, 5);
   const forecastDividerIndex = Math.max(historical.length - 1, 0);
   const forecastDividerX = scaleLineX(forecastDividerIndex, xSpan);
+  const chartEndX = LINE_CHART_WIDTH - LINE_CHART_RIGHT;
+  const splitEndLabelsOverlap = chartEndX - forecastDividerX < MIN_AXIS_LABEL_GAP;
   const startDate = historical[0]?.date ?? null;
   const splitDate = historical.at(-1)?.date ?? null;
   const endDate = forecast.ensemble_forecast.at(-1)?.date ?? splitDate;
+  const forecastStartLabel =
+    splitEndLabelsOverlap && splitDate ? `Forecast Start - ${formatShortDate(splitDate)}` : "Forecast Start";
+  const forecastStartLabelX = splitEndLabelsOverlap ? forecastDividerX - 10 : forecastDividerX;
+  const forecastStartTextAnchor = splitEndLabelsOverlap ? "end" : "middle";
 
   const weightRows: BarDatum[] = forecast.ensemble_components.map((component) => ({
     label: component.display_name,
@@ -250,8 +257,13 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
               y2={LINE_CHART_HEIGHT - LINE_CHART_BOTTOM}
             />
 
-            <text className="chart-phase-text" textAnchor="middle" x={forecastDividerX} y={LINE_CHART_TOP - 8}>
-              Forecast Start
+            <text
+              className="chart-phase-text"
+              textAnchor={forecastStartTextAnchor}
+              x={forecastStartLabelX}
+              y={LINE_CHART_TOP - 8}
+            >
+              {forecastStartLabel}
             </text>
 
             {overlayEnabled ? (
@@ -288,7 +300,9 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
             ))}
 
             {renderXAxisLabel(startDate, LINE_CHART_LEFT, LINE_CHART_HEIGHT - 14, "start")}
-            {renderXAxisLabel(splitDate, forecastDividerX, LINE_CHART_HEIGHT - 14, "middle")}
+            {splitEndLabelsOverlap
+              ? null
+              : renderXAxisLabel(splitDate, forecastDividerX, LINE_CHART_HEIGHT - 14, "middle")}
             {renderXAxisLabel(endDate, LINE_CHART_WIDTH - LINE_CHART_RIGHT, LINE_CHART_HEIGHT - 14, "end")}
           </svg>
 
