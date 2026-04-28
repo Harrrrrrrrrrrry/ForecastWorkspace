@@ -473,7 +473,11 @@ function pickSeriesColor(modelId: string): string {
 }
 
 function formatShortDate(value: string): string {
-  const date = new Date(value);
+  const calendarDateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const date = calendarDateMatch
+    ? new Date(Number(calendarDateMatch[1]), Number(calendarDateMatch[2]) - 1, Number(calendarDateMatch[3]))
+    : new Date(value);
+
   if (Number.isNaN(date.getTime())) {
     return value;
   }
