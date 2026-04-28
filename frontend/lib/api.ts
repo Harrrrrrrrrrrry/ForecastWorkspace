@@ -164,40 +164,6 @@ export type ForecastResponse = {
   limitations: string[];
 };
 
-export type AuthUser = {
-  id: number;
-  email: string;
-  full_name?: string | null;
-  access_reason?: string | null;
-  status: "pending" | "approved";
-  role: "owner" | "admin" | "member";
-  created_at: string;
-  approved_at?: string | null;
-};
-
-export type SignUpRequest = {
-  email: string;
-  password: string;
-  fullName?: string;
-  accessReason?: string;
-};
-
-export type SignUpResponse = {
-  message: string;
-  user: AuthUser;
-};
-
-export type SignInRequest = {
-  email: string;
-  password: string;
-};
-
-export type SignInResponse = {
-  message: string;
-  token: string;
-  user: AuthUser;
-};
-
 export type ExplanationResponse = {
   model: string;
   plain_language_explanation: string;
@@ -229,7 +195,6 @@ export async function fetchStockHistory(
 
 export async function fetchForecast(
   ticker: string,
-  token: string,
   horizonDays = 14,
   analysisWindowDays = 180,
   analysisEndDate?: string,
@@ -254,7 +219,6 @@ export async function fetchForecast(
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       cache: "no-store",
@@ -271,72 +235,10 @@ export async function fetchForecast(
   return (await response.json()) as ForecastResponse;
 }
 
-export async function signUp(payload: SignUpRequest): Promise<SignUpResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/sign-up`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-    body: JSON.stringify({
-      email: payload.email.trim(),
-      password: payload.password,
-      full_name: payload.fullName?.trim() || undefined,
-      access_reason: payload.accessReason?.trim() || undefined,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(await readErrorMessage(response, `Sign-up request failed with status ${response.status}`));
-  }
-
-  return (await response.json()) as SignUpResponse;
-}
-
-export async function signIn(payload: SignInRequest): Promise<SignInResponse> {
-  const response = await fetch(`${API_BASE_URL}/auth/sign-in`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-    body: JSON.stringify({
-      email: payload.email.trim(),
-      password: payload.password,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(await readErrorMessage(response, `Sign-in request failed with status ${response.status}`));
-  }
-
-  return (await response.json()) as SignInResponse;
-}
-
-export async function fetchCurrentUser(token: string): Promise<AuthUser> {
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(await readErrorMessage(response, `Current-user request failed with status ${response.status}`));
-  }
-
-  return (await response.json()) as AuthUser;
-}
-
-export async function fetchExplanation(
-  forecast: ForecastResponse,
-  token: string,
-): Promise<ExplanationResponse> {
+export async function fetchExplanation(forecast: ForecastResponse): Promise<ExplanationResponse> {
   const response = await fetch(`${API_BASE_URL}/explanations`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     cache: "no-store",

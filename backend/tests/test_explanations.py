@@ -1,6 +1,7 @@
 import pytest
+from app.api.routes.explanations import forecast_explanation_service, explanation_rate_limiter
+from app.core.config import get_settings
 from app.main import app
-from app.api.routes.explanations import forecast_explanation_service
 from app.models.schemas import ExplanationResponse
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -9,39 +10,14 @@ from pydantic import ValidationError
 client = TestClient(app)
 
 
-def test_explanations_endpoint_requires_authentication() -> None:
-    response = client.post(
-        "/api/v1/explanations",
-        json={
-            "forecast": {
-                "ticker": "AAPL",
-                "horizon_days": 14,
-                "analysis_window": {"start_date": "2026-01-01", "end_date": "2026-03-31", "lookback_days": 60},
-                "historical_prices": [],
-                "benchmark_candidates": [],
-                "selected_benchmark_history": [],
-                "stock_fourier_forecast": [],
-                "benchmark_projected_forecast": [],
-                "index_based_forecast": [],
-                "final_combined_forecast": [],
-                "diagnostics": {
-                    "analysis_method": "Pearson correlation on aligned daily returns.",
-                    "outlier_detected": False,
-                    "fallback_applied": False,
-                },
-                "summary": {},
-                "warning_banner": None,
-                "warnings": [],
-                "limitations": [],
-            }
-        },
-    )
-
-    assert response.status_code == 401
-    assert response.json() == {"detail": "Authentication is required."}
+@pytest.fixture(autouse=True)
+def reset_explanation_rate_limiter():
+    explanation_rate_limiter.reset()
+    yield
+    explanation_rate_limiter.reset()
 
 
-def test_explanations_endpoint_returns_grounded_sections(monkeypatch, approved_auth_headers) -> None:
+def test_explanations_endpoint_returns_grounded_sections_without_authentication(monkeypatch) -> None:
     def fake_explain(forecast):
         return {
             "model": "gpt-5.4-mini",
@@ -56,7 +32,6 @@ def test_explanations_endpoint_returns_grounded_sections(monkeypatch, approved_a
 
     response = client.post(
         "/api/v1/explanations",
-        headers=approved_auth_headers,
         json={
             "forecast": {
                 "ticker": "AAPL",
@@ -121,31 +96,96 @@ def test_explanations_endpoint_returns_grounded_sections(monkeypatch, approved_a
     assert payload["forecast_signal"] == "bullish"
 
 
+def test_explanations_endpoint_enforces_ip_hourly_limit(monkeypatch) -> None:
+    monkeypatch.setattr(explanation_rate_limiter.settings, "explanation_ip_hourly_limit", 1)
+    monkeypatch.setattr(explanation_rate_limiter.settings, "explanation_global_daily_limit", 50)
+    monkeypatch.setattr(
+        forecast_explanation_service,
+        "explain",
+        lambda forecast: {
+            "model": "gpt-5.4-mini",
+            "plain_language_explanation": "Explanation.",
+            "reliability_summary": "Reliable enough.",
+            "limitations_summary": "Has limits.",
+            "forecast_signal": "neutral",
+            "disclaimer": "Not financial advice.",
+        },
+    )
+
+    response = client.post(
+        "/api/v1/explanations",
+        headers={"x-forwarded-for": "203.0.113.10"},
+        json=minimal_explanation_payload(),
+    )
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/v1/explanations",
+        headers={"x-forwarded-for": "203.0.113.10"},
+        json=minimal_explanation_payload(),
+    )
+
+    assert response.status_code == 429
+    assert response.json() == {
+        "detail": "GPT explanation limit reached for this IP address. Please try again later."
+    }
+
+
+def test_explanations_endpoint_enforces_global_daily_limit(monkeypatch) -> None:
+    monkeypatch.setattr(explanation_rate_limiter.settings, "explanation_ip_hourly_limit", 50)
+    monkeypatch.setattr(explanation_rate_limiter.settings, "explanation_global_daily_limit", 1)
+    monkeypatch.setattr(
+        forecast_explanation_service,
+        "explain",
+        lambda forecast: {
+            "model": "gpt-5.4-mini",
+            "plain_language_explanation": "Explanation.",
+            "reliability_summary": "Reliable enough.",
+            "limitations_summary": "Has limits.",
+            "forecast_signal": "neutral",
+            "disclaimer": "Not financial advice.",
+        },
+    )
+
+    response = client.post(
+        "/api/v1/explanations",
+        headers={"x-forwarded-for": "203.0.113.10"},
+        json=minimal_explanation_payload(),
+    )
+    assert response.status_code == 200
+
+    response = client.post(
+        "/api/v1/explanations",
+        headers={"x-forwarded-for": "203.0.113.11"},
+        json=minimal_explanation_payload(),
+    )
+
+    assert response.status_code == 429
+    assert response.json() == {
+        "detail": "The daily GPT explanation limit for this site has been reached. Please try again tomorrow."
+    }
+
+
+def test_explanations_endpoint_rejects_oversized_request_body(monkeypatch) -> None:
+    monkeypatch.setattr(get_settings(), "explanation_max_request_body_bytes", 32)
+
+    response = client.post(
+        "/api/v1/explanations",
+        json=minimal_explanation_payload(),
+    )
+
+    assert response.status_code == 413
+    assert response.json() == {"detail": "Explanation request body is too large."}
+
+
 def test_explanations_endpoint_reports_missing_api_key(monkeypatch) -> None:
     def fake_explain(forecast):
         raise RuntimeError("OpenAI API key is not configured.")
 
     monkeypatch.setattr(forecast_explanation_service, "explain", fake_explain)
 
-    client.post(
-        "/api/v1/auth/sign-up",
-        json={
-            "email": "approved@example.com",
-            "password": "strongpass1",
-        },
-    )
-    sign_in_response = client.post(
-        "/api/v1/auth/sign-in",
-        json={
-            "email": "approved@example.com",
-            "password": "strongpass1",
-        },
-    )
-    token = sign_in_response.json()["token"]
-
     response = client.post(
         "/api/v1/explanations",
-        headers={"Authorization": f"Bearer {token}"},
         json={
             "forecast": {
                 "ticker": "AAPL",
@@ -173,60 +213,6 @@ def test_explanations_endpoint_reports_missing_api_key(monkeypatch) -> None:
 
     assert response.status_code == 503
     assert response.json() == {"detail": "OpenAI API key is not configured."}
-
-
-def test_explanations_endpoint_enforces_daily_query_limit(
-    monkeypatch,
-    approved_auth_headers,
-) -> None:
-    monkeypatch.setattr(
-        forecast_explanation_service,
-        "explain",
-        lambda forecast: {
-            "model": "gpt-5.4-mini",
-            "plain_language_explanation": "Explanation.",
-            "reliability_summary": "Reliable enough.",
-            "limitations_summary": "Has limits.",
-            "forecast_signal": "neutral",
-            "disclaimer": "Not financial advice.",
-        },
-    )
-    from app.services.auth import auth_service
-
-    monkeypatch.setattr(auth_service.settings, "daily_query_limit", 2)
-
-    payload = {
-        "forecast": {
-            "ticker": "AAPL",
-            "horizon_days": 14,
-            "analysis_window": {"start_date": "2026-01-01", "end_date": "2026-03-31", "lookback_days": 60},
-            "historical_prices": [],
-            "benchmark_candidates": [],
-            "selected_benchmark_history": [],
-            "stock_fourier_forecast": [],
-            "benchmark_projected_forecast": [],
-            "index_based_forecast": [],
-            "final_combined_forecast": [],
-            "diagnostics": {
-                "analysis_method": "Pearson correlation on aligned daily returns.",
-                "outlier_detected": False,
-                "fallback_applied": False,
-            },
-            "summary": {},
-            "warning_banner": None,
-            "warnings": [],
-            "limitations": [],
-        }
-    }
-
-    for _ in range(2):
-        response = client.post("/api/v1/explanations", headers=approved_auth_headers, json=payload)
-        assert response.status_code == 200
-
-    response = client.post("/api/v1/explanations", headers=approved_auth_headers, json=payload)
-
-    assert response.status_code == 429
-    assert response.json() == {"detail": "Today's GPT explanation quota is exhausted. Please try again tomorrow."}
 
 
 def test_explanation_response_rejects_invalid_forecast_signal() -> None:
@@ -270,3 +256,33 @@ def test_parse_json_response_requires_exact_keys_and_valid_signal() -> None:
             }
             """
         )
+
+
+def minimal_explanation_payload() -> dict:
+    return {
+        "forecast": {
+            "ticker": "AAPL",
+            "horizon_days": 14,
+            "analysis_window": {
+                "start_date": "2026-01-01",
+                "end_date": "2026-03-31",
+                "lookback_days": 60,
+            },
+            "historical_prices": [],
+            "benchmark_candidates": [],
+            "selected_benchmark_history": [],
+            "stock_fourier_forecast": [],
+            "benchmark_projected_forecast": [],
+            "index_based_forecast": [],
+            "final_combined_forecast": [],
+            "diagnostics": {
+                "analysis_method": "Pearson correlation on aligned daily returns.",
+                "outlier_detected": False,
+                "fallback_applied": False,
+            },
+            "summary": {},
+            "warning_banner": None,
+            "warnings": [],
+            "limitations": [],
+        }
+    }

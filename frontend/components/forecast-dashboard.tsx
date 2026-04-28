@@ -1,23 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardEvent, FormEvent, KeyboardEvent, useEffect, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, useState } from "react";
 
 import { ForecastChart } from "@/components/forecast-chart";
 import {
-  AuthUser,
   ExplanationResponse,
   ForecastResponse,
-  fetchCurrentUser,
   fetchExplanation,
   fetchForecast,
 } from "@/lib/api";
-import {
-  AUTH_STATE_EVENT,
-  clearStoredAuthSession,
-  getStoredAuthToken,
-  updateStoredAuthUser,
-} from "@/lib/auth";
 
 const DEFAULT_HORIZON = 14;
 const DEFAULT_WINDOW = 180;
@@ -32,8 +24,6 @@ type ForecastCardState = {
 };
 
 export function ForecastDashboard() {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [authToken, setAuthToken] = useState<string | null>(null);
   const [selectedTickers, setSelectedTickers] = useState<string[]>([]);
   const [tickerInput, setTickerInput] = useState("");
   const [forecastDays, setForecastDays] = useState(`${DEFAULT_HORIZON}`);
@@ -43,58 +33,7 @@ export function ForecastDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    let isActive = true;
-
-    async function hydrateAuthState() {
-      const token = getStoredAuthToken();
-
-      if (!token) {
-        if (isActive) {
-          setCurrentUser(null);
-          setAuthToken(null);
-          setForecastCards([]);
-          setError(null);
-        }
-        return;
-      }
-
-      try {
-        const user = await fetchCurrentUser(token);
-        if (!isActive) {
-          return;
-        }
-
-        updateStoredAuthUser(user);
-        setCurrentUser(user);
-        setAuthToken(token);
-      } catch {
-        if (!isActive) {
-          return;
-        }
-
-        clearStoredAuthSession();
-        setCurrentUser(null);
-        setAuthToken(null);
-        setForecastCards([]);
-      }
-    }
-
-    function handleAuthStateChange() {
-      void hydrateAuthState();
-    }
-
-    void hydrateAuthState();
-    window.addEventListener(AUTH_STATE_EVENT, handleAuthStateChange);
-
-    return () => {
-      isActive = false;
-      window.removeEventListener(AUTH_STATE_EVENT, handleAuthStateChange);
-    };
-  }, []);
-
   async function loadForecasts(
-    token: string,
     tickers: string[],
     horizonDays: number,
     windowDays: number,
@@ -108,7 +47,6 @@ export function ForecastDashboard() {
         try {
           const forecast = await fetchForecast(
             ticker,
-            token,
             horizonDays,
             windowDays,
             windowEndDate || undefined,
@@ -163,15 +101,9 @@ export function ForecastDashboard() {
       return;
     }
 
-    if (!authToken) {
-      setError("Sign in to run forecasts and GPT explanations.");
-      return;
-    }
-
     setSelectedTickers(tickers);
     setTickerInput("");
     await loadForecasts(
-      authToken,
       tickers,
       parsedForecastDays,
       parsedAnalysisWindowDays,
@@ -236,18 +168,10 @@ export function ForecastDashboard() {
     setSelectedTickers((current) => current.filter((item) => item !== ticker));
   }
 
-  function handleSignOut() {
-    clearStoredAuthSession();
-    setCurrentUser(null);
-    setAuthToken(null);
-    setForecastCards([]);
-    setError(null);
-  }
-
   async function handleGenerateExplanation(ticker: string) {
     const targetCard = forecastCards.find((card) => card.ticker === ticker);
 
-    if (!authToken || !targetCard?.forecast) {
+    if (!targetCard?.forecast) {
       return;
     }
 
@@ -264,7 +188,7 @@ export function ForecastDashboard() {
     );
 
     try {
-      const explanation = await fetchExplanation(targetCard.forecast, authToken);
+      const explanation = await fetchExplanation(targetCard.forecast);
       setForecastCards((current) =>
         current.map((card) =>
           card.ticker === ticker
@@ -306,22 +230,6 @@ export function ForecastDashboard() {
           </Link>
           <div className="nav-links">
             <Link href="/">Home</Link>
-            {currentUser ? (
-              <>
-                <span className="nav-user">
-                  {currentUser.full_name?.trim() || currentUser.email}
-                  <span className="nav-user-role">{currentUser.role}</span>
-                </span>
-                <button className="nav-link-button" onClick={handleSignOut} type="button">
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/sign-in">Sign In</Link>
-                <Link href="/sign-up">Sign Up</Link>
-              </>
-            )}
           </div>
         </header>
 
@@ -408,7 +316,7 @@ export function ForecastDashboard() {
               </div>
 
               <div className="hero-actions">
-                <button className="ghost-button" disabled={isLoading || !authToken} type="submit">
+                <button className="ghost-button" disabled={isLoading} type="submit">
                   {isLoading ? "Running forecasts" : "Run forecasts"}
                 </button>
                 <div className="hero-status-row" aria-label="Forecast request status">
@@ -429,13 +337,6 @@ export function ForecastDashboard() {
             </form>
 
             {error ? <div className="system-warning">{error}</div> : null}
-            {!currentUser ? (
-              <div className="system-warning">
-                <strong>Authentication required</strong>
-                <span>Sign in or create an account to run forecasts and use GPT explanations.</span>
-              </div>
-            ) : null}
-
             {forecastCards.length > 0 ? (
               <div className="stocks-nav">
                 {forecastCards.map((item) => (
@@ -454,7 +355,6 @@ export function ForecastDashboard() {
         <div className="stocks-stack">
           {forecastCards.map((item) => (
             <StockForecastBoard
-              currentUser={currentUser}
               item={item}
               key={item.ticker}
               onGenerateExplanation={handleGenerateExplanation}
@@ -475,11 +375,9 @@ export function ForecastDashboard() {
 
 function StockForecastBoard({
   item,
-  currentUser,
   onGenerateExplanation,
 }: {
   item: ForecastCardState;
-  currentUser: AuthUser | null;
   onGenerateExplanation: (ticker: string) => void;
 }) {
   const forecast = item.forecast;
@@ -563,57 +461,50 @@ function StockForecastBoard({
 
             <section className="notes-block">
               <span className="scene-kicker">Explanations</span>
-              {currentUser ? (
-                <div className="explanation-shell">
-                  <p className="notes-copy">
-                    Generate a grounded GPT summary based only on the structured forecast payload.
-                  </p>
-                  <div className="explanation-actions">
-                    <button
-                      className="ghost-button"
-                      disabled={item.isExplanationLoading}
-                      onClick={() => onGenerateExplanation(item.ticker)}
-                      type="button"
-                    >
-                      {item.isExplanationLoading ? "Generating explanation" : "Generate Explanation"}
-                    </button>
-                    {item.explanation ? (
-                      <span className="explanation-meta">Model {item.explanation.model}</span>
-                    ) : null}
-                  </div>
-                  {item.explanationError ? (
-                    <div className="system-warning">
-                      <strong>Explanation error</strong>
-                      <span>{item.explanationError}</span>
-                    </div>
-                  ) : null}
+              <div className="explanation-shell">
+                <p className="notes-copy">
+                  Generate a grounded GPT summary based only on the structured forecast payload.
+                </p>
+                <div className="explanation-actions">
+                  <button
+                    className="ghost-button"
+                    disabled={item.isExplanationLoading}
+                    onClick={() => onGenerateExplanation(item.ticker)}
+                    type="button"
+                  >
+                    {item.isExplanationLoading ? "Generating explanation" : "Generate Explanation"}
+                  </button>
                   {item.explanation ? (
-                    <div className="explanation-result">
-                      <article className="explanation-section">
-                        <strong>Plain-language summary</strong>
-                        <p>{item.explanation.plain_language_explanation}</p>
-                      </article>
-                      <article className="explanation-section">
-                        <strong>Reliability</strong>
-                        <p>{item.explanation.reliability_summary}</p>
-                      </article>
-                      <article className="explanation-section">
-                        <strong>Limitations</strong>
-                        <p>{item.explanation.limitations_summary}</p>
-                      </article>
-                      <article className="explanation-section">
-                        <strong>Disclaimer</strong>
-                        <p>{item.explanation.disclaimer}</p>
-                      </article>
-                    </div>
+                    <span className="explanation-meta">Model {item.explanation.model}</span>
                   ) : null}
                 </div>
-              ) : (
-                <p className="notes-copy">
-                  Sign in with an approved account to generate GPT-backed explanations for this
-                  forecast.
-                </p>
-              )}
+                {item.explanationError ? (
+                  <div className="system-warning">
+                    <strong>Explanation error</strong>
+                    <span>{item.explanationError}</span>
+                  </div>
+                ) : null}
+                {item.explanation ? (
+                  <div className="explanation-result">
+                    <article className="explanation-section">
+                      <strong>Plain-language summary</strong>
+                      <p>{item.explanation.plain_language_explanation}</p>
+                    </article>
+                    <article className="explanation-section">
+                      <strong>Reliability</strong>
+                      <p>{item.explanation.reliability_summary}</p>
+                    </article>
+                    <article className="explanation-section">
+                      <strong>Limitations</strong>
+                      <p>{item.explanation.limitations_summary}</p>
+                    </article>
+                    <article className="explanation-section">
+                      <strong>Disclaimer</strong>
+                      <p>{item.explanation.disclaimer}</p>
+                    </article>
+                  </div>
+                ) : null}
+              </div>
             </section>
           </div>
         </div>
