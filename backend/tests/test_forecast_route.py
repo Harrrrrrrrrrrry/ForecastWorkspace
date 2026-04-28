@@ -6,17 +6,7 @@ from fastapi.testclient import TestClient
 client = TestClient(app)
 
 
-def test_forecast_endpoint_requires_authentication() -> None:
-    response = client.post(
-        "/api/v1/forecast",
-        json={"ticker": "aapl", "horizon_days": 7, "analysis_window_days": 60},
-    )
-
-    assert response.status_code == 401
-    assert response.json() == {"detail": "Authentication is required."}
-
-
-def test_forecast_endpoint_returns_structured_response(monkeypatch, approved_auth_headers) -> None:
+def test_forecast_endpoint_returns_structured_response_without_authentication(monkeypatch) -> None:
     def fake_run(payload):
         return {
             "ticker": payload.ticker.upper(),
@@ -63,7 +53,6 @@ def test_forecast_endpoint_returns_structured_response(monkeypatch, approved_aut
 
     response = client.post(
         "/api/v1/forecast",
-        headers=approved_auth_headers,
         json={
             "ticker": "aapl",
             "horizon_days": 7,

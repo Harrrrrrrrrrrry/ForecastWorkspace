@@ -8,7 +8,7 @@ Market Influence Model Platform is a full-stack academic stock forecasting syste
 - selects benchmark indices through correlation analysis
 - generates forecasts with Market Influence, ARIMA, and XGBoost components
 - blends model outputs into a final forecast with reliability checks
-- provides authenticated, plain-language explanations for approved users
+- provides open, plain-language explanations from the structured forecast payload
 
 ## Stack
 
@@ -18,10 +18,13 @@ Market Influence Model Platform is a full-stack academic stock forecasting syste
 
 ## Repository
 
-- `backend/`: API routes, forecasting services, auth, and tests
-- `frontend/`: dashboard, charts, auth pages, and API client
+- `backend/`: API routes, forecasting services, and tests
+- `frontend/`: dashboard, charts, and API client
 - `docs/architecture.md`: architecture notes
 
 ## Notes
 
 This project is designed as an educational decision-support tool, not financial advice.
+The GPT explanation endpoint is open but protected by configurable request size and rate limits.
+Configure `EXPLANATION_IP_HOURLY_LIMIT`, `EXPLANATION_GLOBAL_DAILY_LIMIT`, and
+`EXPLANATION_MAX_REQUEST_BODY_BYTES` on the backend deployment to control GPT abuse risk.

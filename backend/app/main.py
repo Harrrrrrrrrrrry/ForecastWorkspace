@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, explanations, forecast, health, stocks
+from app.api.routes import explanations, forecast, health, stocks
 from app.core.config import get_settings
+from app.core.request_size import ExplanationBodySizeLimitMiddleware
 
 
 settings = get_settings()
@@ -20,9 +21,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(ExplanationBodySizeLimitMiddleware)
 
 app.include_router(health.router, prefix=settings.api_v1_prefix)
-app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(stocks.router, prefix=settings.api_v1_prefix)
 app.include_router(forecast.router, prefix=settings.api_v1_prefix)
 app.include_router(explanations.router, prefix=settings.api_v1_prefix)

@@ -1,10 +1,8 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
-from app.api.routes.auth import get_current_approved_user
 from app.models.schemas import ForecastRequest, ForecastResponse
-from app.services.auth import AuthUser
 from app.services.market_influence import MarketInfluenceModelService
 
 
@@ -16,9 +14,7 @@ logger = logging.getLogger(__name__)
 @router.post("/forecast", response_model=ForecastResponse)
 def generate_forecast(
     payload: ForecastRequest,
-    current_user: AuthUser = Depends(get_current_approved_user),
 ) -> ForecastResponse:
-    _ = current_user
     try:
         return market_influence_service.run(payload)
     except ValueError as exc:
