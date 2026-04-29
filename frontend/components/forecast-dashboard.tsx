@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ClipboardEvent, FormEvent, KeyboardEvent, useState } from "react";
 
@@ -224,19 +225,27 @@ export function ForecastDashboard() {
     <main className="mission-shell dashboard-shell">
       <section className="scene scene-hero">
         <div className="scene-overlay" />
-        <header className="mission-nav">
-          <Link className="nav-mark" href="/">
-            Forecast Workspace
+        <header className="mission-nav landing-nav">
+          <Link className="nav-mark landing-brand" href="/">
+            <Image
+              alt=""
+              aria-hidden="true"
+              className="landing-brand-logo"
+              height={32}
+              src="/images/no_background_logo.svg"
+              width={32}
+            />
+            <span>PrismForecast</span>
           </Link>
-          <div className="nav-links">
+          <div className="nav-links landing-links">
             <Link href="/">Home</Link>
+            <Link href="/dashboard">Dashboard</Link>
           </div>
         </header>
 
         <div className="hero-layout">
           <div className="hero-copy">
-            <span className="scene-kicker">Forecast Workspace</span>
-            <h1>Stock Forecast Dashboard</h1>
+            <h1>Try a forecast for any stock.</h1>
             <p>
               Enter multiple ticker symbols to generate a dedicated forecast board for each stock
               with charts, model diagnostics, and benchmark comparison.
@@ -316,7 +325,7 @@ export function ForecastDashboard() {
               </div>
 
               <div className="hero-actions">
-                <button className="ghost-button" disabled={isLoading} type="submit">
+                <button className="forecast-submit-button" disabled={isLoading} type="submit">
                   {isLoading ? "Running forecasts" : "Run forecasts"}
                 </button>
                 <div className="hero-status-row" aria-label="Forecast request status">
@@ -390,7 +399,6 @@ function StockForecastBoard({
     <article className="stock-board" id={`stock-${item.ticker}`}>
       <div className="stock-board-header">
         <div>
-          <span className="scene-kicker">{item.ticker}</span>
           <h2 className="stock-board-title">{item.ticker} Forecast</h2>
           <p className="stock-board-meta">
             {forecast
@@ -448,7 +456,7 @@ function StockForecastBoard({
 
           <div className="notes-grid">
             <section className="notes-block">
-              <span className="scene-kicker">Diagnostics</span>
+              <span className="scene-kicker notes-title">Diagnostics</span>
               <ul className="signal-list">
                 <li>Analysis method: {diagnostics?.analysis_method ?? "Unavailable"}</li>
                 <li>Alpha weight: {formatDecimal(summary?.alpha)}</li>
@@ -459,8 +467,8 @@ function StockForecastBoard({
               </ul>
             </section>
 
-            <section className="notes-block">
-              <span className="scene-kicker">Explanations</span>
+            <section className="notes-block explanation-notes-block">
+              <span className="scene-kicker notes-title">GPT 5.4</span>
               <div className="explanation-shell">
                 <p className="notes-copy">
                   Generate a grounded GPT summary based only on the structured forecast payload.
