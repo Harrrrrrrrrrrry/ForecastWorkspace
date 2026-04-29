@@ -154,7 +154,7 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
     note: candidate.name,
     value: Math.max(candidate.correlation, 0),
     display: candidate.correlation.toFixed(4),
-    color: "#4f6fd9",
+    color: "#0f7a3b",
   }));
 
   const dailyForecastPrices: ForecastPriceDatum[] = forecast.ensemble_forecast.map((point, index) => {
@@ -173,8 +173,7 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
   return (
     <section className="scene-chart">
       <div className="scene-heading">
-        <span className="scene-kicker">Forecast Visuals</span>
-        <h2>Forecast comparison, model weights, and benchmark ranking.</h2>
+        <h2>Forecast Visuals</h2>
       </div>
 
       <div className="chart-dashboard">
@@ -182,9 +181,6 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
           <div className="panel-header">
             <div>
               <h3 className="panel-title">Price Forecast Timeline</h3>
-              <p className="panel-copy">
-                Historical prices and forecast paths shown on a single time axis.
-              </p>
             </div>
             <div className="chart-header-actions">
               <span className="panel-meta">{forecast.horizon_days} day forecast horizon</span>
@@ -324,13 +320,11 @@ export function ForecastChart({ forecast }: ForecastChartProps) {
 
         <BarPanel
           rows={weightRows}
-          description="Relative contribution of each model in the combined forecast."
           title="Model Weights"
         />
 
         <BarPanel
           rows={benchmarkRows}
-          description="Top benchmark candidates ranked by correlation score."
           title="Benchmark Correlation"
         />
       </div>
@@ -344,7 +338,7 @@ function BarPanel({
   rows,
 }: {
   title: string;
-  description: string;
+  description?: string;
   rows: BarDatum[];
 }) {
   const maxValue = Math.max(...rows.map((row) => row.value), 0.0001);
@@ -354,7 +348,7 @@ function BarPanel({
       <div className="panel-header">
         <div>
           <h3 className="panel-title">{title}</h3>
-          <p className="panel-copy">{description}</p>
+          {description ? <p className="panel-copy">{description}</p> : null}
         </div>
       </div>
 
