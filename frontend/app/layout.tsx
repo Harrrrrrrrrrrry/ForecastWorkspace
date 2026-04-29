@@ -4,7 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Market Forecast Workspace",
+  title: "PrismForecast",
   description: "Web platform for stock forecasting based on the Market Influence Model.",
 };
 
