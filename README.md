@@ -16,15 +16,9 @@ Market Influence Model Platform is a full-stack academic stock forecasting syste
 - Frontend: Next.js, React, TypeScript
 - Data and AI: yfinance, OpenAI API
 
-## Repository
-
-- `backend/`: API routes, forecasting services, and tests
-- `frontend/`: dashboard, charts, and API client
-- `docs/architecture.md`: architecture notes
-
 ## Notes
 
 This project is designed as an educational decision-support tool, not financial advice.
-The GPT explanation endpoint is open but protected by configurable request size and rate limits.
-Configure `EXPLANATION_IP_HOURLY_LIMIT`, `EXPLANATION_GLOBAL_DAILY_LIMIT`, and
-`EXPLANATION_MAX_REQUEST_BODY_BYTES` on the backend deployment to control GPT abuse risk.
+
+## Website link
+https://forecastworkspace.vercel.app
