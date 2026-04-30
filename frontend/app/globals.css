@@ -2013,6 +2013,127 @@ input {
   transform: rotate(45deg);
 }
 
+.legal-link-bar {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  border-top: 1px solid rgba(17, 17, 17, 0.1);
+  background: #ffffff;
+  color: #111111;
+  padding: 22px clamp(20px, 5vw, 56px) 28px;
+}
+
+.legal-link-list {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: min(100%, 1120px);
+}
+
+.legal-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.03);
+  color: rgba(17, 17, 17, 0.72);
+  padding: 0 16px;
+  font-size: 0.85rem;
+  font-weight: 650;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.legal-link-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(15, 122, 59, 0.28);
+  background: rgba(15, 122, 59, 0.08);
+  color: #0f7a3b;
+}
+
+.site-credit {
+  margin: 0;
+  color: rgba(17, 17, 17, 0.5);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.site-credit a {
+  color: rgba(17, 17, 17, 0.72);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.site-credit a:hover {
+  color: #0f7a3b;
+}
+
+.legal-page-shell {
+  --spectral-white: #111111;
+  --copy-muted: rgba(17, 17, 17, 0.68);
+  min-height: 100vh;
+  background: #ffffff;
+  color: #111111;
+  padding: 24px clamp(20px, 5vw, 56px) 72px;
+}
+
+.site-header {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 32px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.1);
+}
+
+.site-header .landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.legal-page-shell .site-header {
+  width: min(100%, 960px);
+  margin: 0 auto 56px;
+}
+
+.legal-page-content {
+  display: grid;
+  gap: 18px;
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+
+.legal-page-updated {
+  margin: 0;
+  color: rgba(17, 17, 17, 0.48);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.legal-page-content h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  font-weight: 650;
+}
+
+.legal-page-content p {
+  margin: 0;
+  color: rgba(17, 17, 17, 0.68);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
 .how-it-works-section {
   display: grid;
   justify-items: center;
