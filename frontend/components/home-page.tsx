@@ -3,30 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { LegalLinks } from "@/components/legal-links";
+import { SiteHeader } from "@/components/site-header";
+
 export function HomePageShell() {
   return (
     <main className="landing-shell forecast-home">
       <section className="scene landing-hero forecast-home-hero">
         <div className="scene-overlay landing-overlay" />
 
-        <header className="mission-nav landing-nav">
-          <Link className="nav-mark landing-brand" href="/">
-            <Image
-              alt=""
-              aria-hidden="true"
-              className="landing-brand-logo"
-              height={32}
-              src="/images/no_background_logo.svg"
-              width={32}
-            />
-            <span>PrismForecast</span>
-          </Link>
-
-          <div className="nav-links landing-links">
-            <Link href="/">Home</Link>
-            <Link href="/dashboard">Dashboard</Link>
-          </div>
-        </header>
+        <SiteHeader />
 
         <div className="forecast-hero-layout landing-reveal">
           <div className="forecast-side-panel">
@@ -130,6 +116,8 @@ export function HomePageShell() {
           </article>
         </div>
       </section>
+
+      <LegalLinks />
     </main>
   );
 }

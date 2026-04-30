@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { ClipboardEvent, FormEvent, KeyboardEvent, useState } from "react";
 
 import { ForecastChart } from "@/components/forecast-chart";
+import { LegalLinks } from "@/components/legal-links";
+import { SiteHeader } from "@/components/site-header";
 import {
   ExplanationResponse,
   ForecastResponse,
@@ -225,23 +225,7 @@ export function ForecastDashboard() {
     <main className="mission-shell dashboard-shell">
       <section className="scene scene-hero">
         <div className="scene-overlay" />
-        <header className="mission-nav landing-nav">
-          <Link className="nav-mark landing-brand" href="/">
-            <Image
-              alt=""
-              aria-hidden="true"
-              className="landing-brand-logo"
-              height={32}
-              src="/images/no_background_logo.svg"
-              width={32}
-            />
-            <span>PrismForecast</span>
-          </Link>
-          <div className="nav-links landing-links">
-            <Link href="/">Home</Link>
-            <Link href="/dashboard">Dashboard</Link>
-          </div>
-        </header>
+        <SiteHeader />
 
         <div className="hero-layout">
           <div className="hero-copy">
@@ -378,6 +362,8 @@ export function ForecastDashboard() {
           ) : null}
         </div>
       </section>
+
+      <LegalLinks />
     </main>
   );
 }
