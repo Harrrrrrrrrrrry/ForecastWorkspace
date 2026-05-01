@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardEvent, FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, ReactNode, useEffect, useRef, useState } from "react";
 
 import { ForecastChart } from "@/components/forecast-chart";
 import { LegalLinks } from "@/components/legal-links";
@@ -584,7 +584,7 @@ function StockForecastBoard({
               <span className="scene-kicker notes-title">GPT 5.4</span>
               <div className="explanation-shell">
                 <p className="notes-copy">
-                  Generate a grounded GPT summary based only on the structured forecast payload.
+                  GPT checks the forecast. AI can make mistakes.
                 </p>
                 <div className="explanation-actions">
                   <button
@@ -593,7 +593,7 @@ function StockForecastBoard({
                     onClick={() => onGenerateExplanation(item.ticker)}
                     type="button"
                   >
-                    {item.isExplanationLoading ? "Generating explanation" : "Generate Explanation"}
+                    {item.isExplanationLoading ? "Asking" : "Ask GPT"}
                   </button>
                   {item.explanation ? (
                     <span className="explanation-meta">Model {item.explanation.model}</span>
@@ -608,20 +608,21 @@ function StockForecastBoard({
                 {item.explanation ? (
                   <div className="explanation-result">
                     <article className="explanation-section">
-                      <strong>Plain-language summary</strong>
-                      <p>{item.explanation.plain_language_explanation}</p>
+                      <strong>AI Verdict</strong>
+                      <div className="ai-verdict-row">
+                        <span
+                          className={`ai-confidence-score ${getAiConfidenceClassName(
+                            item.explanation.ai_confidence_percent,
+                          )}`}
+                        >
+                          {item.explanation.ai_confidence_percent}%
+                        </span>
+                        <p>{renderBoldNumbers(item.explanation.ai_verdict)}</p>
+                      </div>
                     </article>
                     <article className="explanation-section">
-                      <strong>Reliability</strong>
-                      <p>{item.explanation.reliability_summary}</p>
-                    </article>
-                    <article className="explanation-section">
-                      <strong>Limitations</strong>
-                      <p>{item.explanation.limitations_summary}</p>
-                    </article>
-                    <article className="explanation-section">
-                      <strong>Disclaimer</strong>
-                      <p>{item.explanation.disclaimer}</p>
+                      <strong>Why</strong>
+                      <p>{renderBoldNumbers(item.explanation.reasoning_summary)}</p>
                     </article>
                   </div>
                 ) : null}
@@ -840,6 +841,47 @@ function getDirectionalTone(
   }
 
   return value > 0 ? "positive" : "negative";
+}
+
+function getAiConfidenceClassName(value: number): string {
+  if (value < 30) {
+    return "ai-confidence-danger";
+  }
+
+  if (value < 60) {
+    return "ai-confidence-warning";
+  }
+
+  if (value < 80) {
+    return "ai-confidence-moderate";
+  }
+
+  return "ai-confidence-strong";
+}
+
+function renderBoldNumbers(text: string): ReactNode[] {
+  const numericPattern =
+    /([+-]?\$?\d{1,3}(?:,\d{3})*(?:\.\d+)?(?:\s?(?:USD|usd|%))?|[+-]?\d+(?:\.\d+)?(?:\s?(?:USD|usd|%))?)/g;
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(numericPattern)) {
+    const matchText = match[0];
+    const matchIndex = match.index ?? 0;
+
+    if (matchIndex > lastIndex) {
+      parts.push(text.slice(lastIndex, matchIndex));
+    }
+
+    parts.push(<strong key={`${matchText}-${matchIndex}`}>{matchText}</strong>);
+    lastIndex = matchIndex + matchText.length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts;
 }
 
 function formatInteger(value: number | null | undefined): string {

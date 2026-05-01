@@ -166,11 +166,17 @@ export type ForecastResponse = {
 
 export type ExplanationResponse = {
   model: string;
-  plain_language_explanation: string;
-  reliability_summary: string;
-  limitations_summary: string;
+  ai_confidence_percent: number;
+  ai_verdict: string;
+  reasoning_summary: string;
   forecast_signal: "bullish" | "bearish" | "neutral" | "uncertain";
-  disclaimer: string;
+};
+
+const LOCAL_EXPLANATION_CONFIDENCE_BY_TICKER: Record<string, number> = {
+  GME: 29,
+  TSLA: 45,
+  NVDA: 72,
+  AAPL: 88,
 };
 
 export async function fetchStockHistory(
@@ -236,6 +242,10 @@ export async function fetchForecast(
 }
 
 export async function fetchExplanation(forecast: ForecastResponse): Promise<ExplanationResponse> {
+  if (shouldUseLocalExplanationMock()) {
+    return buildLocalExplanationMock(forecast);
+  }
+
   const response = await fetch(`${API_BASE_URL}/explanations`, {
     method: "POST",
     headers: {
@@ -252,4 +262,84 @@ export async function fetchExplanation(forecast: ForecastResponse): Promise<Expl
   }
 
   return (await response.json()) as ExplanationResponse;
+}
+
+function shouldUseLocalExplanationMock(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
+
+function buildLocalExplanationMock(forecast: ForecastResponse): ExplanationResponse {
+  const ticker = forecast.ticker.toUpperCase();
+  const confidencePercent =
+    LOCAL_EXPLANATION_CONFIDENCE_BY_TICKER[ticker] ??
+    clampPercent(Math.round((forecast.summary.confidence_score ?? 0.72) * 100));
+  const predictedPrice = formatMockCurrency(forecast.summary.predicted_price);
+  const predictedChange = formatMockPercent(forecast.summary.predicted_percent_change);
+
+  return {
+    model: "local-mock",
+    ai_confidence_percent: confidencePercent,
+    ai_verdict: buildMockVerdict(confidencePercent, predictedPrice, predictedChange),
+    reasoning_summary: buildMockReasoning(forecast, confidencePercent),
+    forecast_signal: confidencePercent < 30 ? "uncertain" : getMockForecastSignal(forecast),
+  };
+}
+
+function buildMockVerdict(
+  confidencePercent: number,
+  predictedPrice: string,
+  predictedChange: string,
+): string {
+  if (confidencePercent < 30) {
+    return `I would be skeptical of the ${predictedPrice} forecast and the ${predictedChange} move.`;
+  }
+
+  if (confidencePercent < 60) {
+    return `I would not fully trust the exact ${predictedPrice} price target, even though the ${predictedChange} move is usable for review.`;
+  }
+
+  if (confidencePercent < 80) {
+    return `I would moderately trust the ${predictedPrice} forecast, with ${predictedChange} still carrying model risk.`;
+  }
+
+  return `I would treat the ${predictedPrice} forecast as reasonably believable, including the ${predictedChange} move.`;
+}
+
+function buildMockReasoning(forecast: ForecastResponse, confidencePercent: number): string {
+  const agreement = formatMockNumber(forecast.diagnostics.benchmark_agreement_score);
+  const volatility = formatMockNumber(forecast.diagnostics.recent_volatility);
+
+  return `This local mock gives ${confidencePercent}% AI confidence from benchmark agreement ${agreement} and volatility ${volatility}. It is only for UI testing and is not financial advice.`;
+}
+
+function getMockForecastSignal(
+  forecast: ForecastResponse,
+): "bullish" | "bearish" | "neutral" | "uncertain" {
+  const percentChange = forecast.summary.predicted_percent_change;
+
+  if (percentChange == null || Math.abs(percentChange) < 0.1) {
+    return "neutral";
+  }
+
+  return percentChange > 0 ? "bullish" : "bearish";
+}
+
+function formatMockCurrency(value: number | null): string {
+  return value == null ? "the terminal price" : `${value.toFixed(2)} USD`;
+}
+
+function formatMockPercent(value: number | null): string {
+  return value == null ? "projected percent" : `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
+function formatMockNumber(value: number | null | undefined): string {
+  return value == null ? "unavailable" : value.toFixed(4);
+}
+
+function clampPercent(value: number): number {
+  return Math.max(0, Math.min(100, value));
 }

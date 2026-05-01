@@ -154,8 +154,7 @@ ExplanationSignal = Literal["bullish", "bearish", "neutral", "uncertain"]
 
 class ExplanationResponse(BaseModel):
     model: str
-    plain_language_explanation: str
-    reliability_summary: str
-    limitations_summary: str
+    ai_confidence_percent: int = Field(..., ge=0, le=100)
+    ai_verdict: str
+    reasoning_summary: str
     forecast_signal: ExplanationSignal
-    disclaimer: str
