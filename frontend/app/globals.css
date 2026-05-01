@@ -504,6 +504,116 @@ input {
   font-weight: 500;
 }
 
+.forecast-progress-panel {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 720px);
+  margin-top: 18px;
+  border: 1px solid var(--line-muted);
+  border-radius: 22px;
+  background: rgba(240, 240, 250, 0.04);
+  padding: 18px;
+  backdrop-filter: blur(8px);
+}
+
+.forecast-progress-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.forecast-progress-header h2 {
+  margin: 4px 0 0;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.forecast-progress-summary {
+  flex: 0 0 auto;
+  border: 1px solid var(--line-muted);
+  border-radius: 999px;
+  background: rgba(240, 240, 250, 0.04);
+  color: var(--copy-muted);
+  padding: 8px 12px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.forecast-progress-list {
+  display: grid;
+  gap: 10px;
+}
+
+.forecast-progress-row {
+  display: grid;
+  grid-template-columns: auto minmax(64px, 0.16fr) minmax(150px, 0.32fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: rgba(240, 240, 250, 0.035);
+  padding: 10px 12px;
+}
+
+.forecast-progress-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--copy-dim);
+  box-shadow: 0 0 14px rgba(240, 240, 250, 0.22);
+}
+
+.forecast-progress-ticker {
+  color: var(--spectral-white);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.forecast-progress-step {
+  color: var(--spectral-white);
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.forecast-progress-message {
+  min-width: 0;
+  color: var(--copy-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.forecast-progress-row-getting_data .forecast-progress-dot,
+.forecast-progress-row-calculating_models .forecast-progress-dot,
+.forecast-progress-row-building_index_forecast .forecast-progress-dot,
+.forecast-progress-row-finalizing .forecast-progress-dot {
+  background: #f4c68d;
+  box-shadow: 0 0 16px rgba(244, 198, 141, 0.42);
+}
+
+.forecast-progress-row-complete .forecast-progress-dot {
+  background: var(--success);
+  box-shadow: 0 0 16px rgba(127, 223, 159, 0.42);
+}
+
+.forecast-progress-row-error .forecast-progress-dot {
+  background: var(--danger);
+  box-shadow: 0 0 16px rgba(255, 107, 107, 0.42);
+}
+
+.forecast-progress-row-complete .forecast-progress-step {
+  color: var(--success);
+}
+
+.forecast-progress-row-error .forecast-progress-step,
+.forecast-progress-row-error .forecast-progress-message {
+  color: var(--danger);
+}
+
 .stocks-nav {
   display: flex;
   flex-wrap: wrap;
@@ -1266,6 +1376,9 @@ input {
 .dashboard-shell .stock-chip,
 .dashboard-shell .ghost-button,
 .dashboard-shell .hero-status-pill,
+.dashboard-shell .forecast-progress-panel,
+.dashboard-shell .forecast-progress-row,
+.dashboard-shell .forecast-progress-summary,
 .dashboard-shell .summary-card,
 .dashboard-shell .data-column,
 .dashboard-shell .notes-block,
@@ -1308,6 +1421,29 @@ input {
 .dashboard-shell .system-warning {
   border-color: rgba(15, 122, 59, 0.22);
   background: rgba(15, 122, 59, 0.08);
+}
+
+.dashboard-shell .forecast-progress-panel {
+  color: #111111;
+}
+
+.dashboard-shell .forecast-progress-summary,
+.dashboard-shell .forecast-progress-message {
+  color: rgba(17, 17, 17, 0.62);
+}
+
+.dashboard-shell .forecast-progress-ticker,
+.dashboard-shell .forecast-progress-step {
+  color: #111111;
+}
+
+.dashboard-shell .forecast-progress-row-complete .forecast-progress-step {
+  color: #0f7a3b;
+}
+
+.dashboard-shell .forecast-progress-row-error .forecast-progress-step,
+.dashboard-shell .forecast-progress-row-error .forecast-progress-message {
+  color: #c83d3d;
 }
 
 .dashboard-shell .explanation-section {
@@ -2483,6 +2619,24 @@ input {
 
   .parameter-grid {
     grid-template-columns: 1fr;
+  }
+
+  .forecast-progress-header {
+    display: grid;
+  }
+
+  .forecast-progress-summary {
+    width: fit-content;
+  }
+
+  .forecast-progress-row {
+    grid-template-columns: auto 1fr;
+    align-items: start;
+  }
+
+  .forecast-progress-step,
+  .forecast-progress-message {
+    grid-column: 2;
   }
 
   .launch-input-row,
