@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardEvent, FormEvent, KeyboardEvent, useState } from "react";
+import { ClipboardEvent, FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { ForecastChart } from "@/components/forecast-chart";
 import { LegalLinks } from "@/components/legal-links";
@@ -14,6 +14,22 @@ import {
 
 const DEFAULT_HORIZON = 14;
 const DEFAULT_WINDOW = 180;
+
+type ForecastProgressStatus =
+  | "queued"
+  | "getting_data"
+  | "calculating_models"
+  | "building_index_forecast"
+  | "finalizing"
+  | "complete"
+  | "error";
+
+type ForecastProgressItem = {
+  ticker: string;
+  status: ForecastProgressStatus;
+  message: string;
+  error: string | null;
+};
 
 type ForecastCardState = {
   ticker: string;
@@ -31,8 +47,16 @@ export function ForecastDashboard() {
   const [analysisWindowDays, setAnalysisWindowDays] = useState(`${DEFAULT_WINDOW}`);
   const [analysisEndDate, setAnalysisEndDate] = useState("");
   const [forecastCards, setForecastCards] = useState<ForecastCardState[]>([]);
+  const [forecastProgressItems, setForecastProgressItems] = useState<ForecastProgressItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const progressTimersRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    return () => {
+      clearProgressTimers();
+    };
+  }, []);
 
   async function loadForecasts(
     tickers: string[],
@@ -40,11 +64,24 @@ export function ForecastDashboard() {
     windowDays: number,
     windowEndDate: string,
   ) {
+    clearProgressTimers();
     setIsLoading(true);
     setError(null);
+    setForecastCards([]);
+    setForecastProgressItems(
+      tickers.map((ticker) => ({
+        ticker,
+        status: "queued",
+        message: "Waiting to start",
+        error: null,
+      })),
+    );
 
     const responses = await Promise.all(
       tickers.map(async (ticker) => {
+        updateForecastProgress(ticker, "getting_data");
+        scheduleProgressAdvance(ticker);
+
         try {
           const forecast = await fetchForecast(
             ticker,
@@ -52,6 +89,8 @@ export function ForecastDashboard() {
             windowDays,
             windowEndDate || undefined,
           );
+          updateForecastProgress(ticker, "complete");
+
           return {
             ticker,
             forecast,
@@ -63,6 +102,8 @@ export function ForecastDashboard() {
         } catch (requestError) {
           const message =
             requestError instanceof Error ? requestError.message : "Failed to load forecast.";
+          updateForecastProgress(ticker, "error", message);
+
           return {
             ticker,
             forecast: null,
@@ -76,7 +117,49 @@ export function ForecastDashboard() {
     );
 
     setForecastCards(responses);
+    clearProgressTimers();
     setIsLoading(false);
+  }
+
+  function clearProgressTimers() {
+    progressTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    progressTimersRef.current = [];
+  }
+
+  function scheduleProgressAdvance(ticker: string) {
+    const scheduledSteps: Array<{ delayMs: number; status: ForecastProgressStatus }> = [
+      { delayMs: 700, status: "calculating_models" },
+      { delayMs: 1800, status: "building_index_forecast" },
+      { delayMs: 3200, status: "finalizing" },
+    ];
+
+    scheduledSteps.forEach(({ delayMs, status }) => {
+      const timerId = window.setTimeout(() => {
+        updateForecastProgress(ticker, status);
+      }, delayMs);
+      progressTimersRef.current.push(timerId);
+    });
+  }
+
+  function updateForecastProgress(
+    ticker: string,
+    status: ForecastProgressStatus,
+    statusError: string | null = null,
+  ) {
+    setForecastProgressItems((current) =>
+      current.map((item) => {
+        if (item.ticker !== ticker || isTerminalProgressStatus(item.status)) {
+          return item;
+        }
+
+        return {
+          ...item,
+          status,
+          message: getForecastProgressMessage(status),
+          error: statusError,
+        };
+      }),
+    );
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -89,16 +172,19 @@ export function ForecastDashboard() {
     if (tickers.length === 0) {
       setError("Enter one or more ticker symbols.");
       setForecastCards([]);
+      setForecastProgressItems([]);
       return;
     }
 
     if (parsedForecastDays == null || parsedAnalysisWindowDays == null) {
       setError("Forecast days and analysis window must be positive whole numbers.");
+      setForecastProgressItems([]);
       return;
     }
 
     if (analysisEndDate && analysisEndDate > getTodayInputDate()) {
       setError("Window end date cannot be in the future.");
+      setForecastProgressItems([]);
       return;
     }
 
@@ -329,6 +415,10 @@ export function ForecastDashboard() {
               </div>
             </form>
 
+            {forecastProgressItems.length > 0 ? (
+              <ForecastProgressPanel items={forecastProgressItems} />
+            ) : null}
+
             {error ? <div className="system-warning">{error}</div> : null}
             {forecastCards.length > 0 ? (
               <div className="stocks-nav">
@@ -365,6 +455,43 @@ export function ForecastDashboard() {
 
       <LegalLinks />
     </main>
+  );
+}
+
+function ForecastProgressPanel({ items }: { items: ForecastProgressItem[] }) {
+  const completeCount = items.filter((item) => item.status === "complete").length;
+  const errorCount = items.filter((item) => item.status === "error").length;
+  const totalCount = items.length;
+
+  return (
+    <section className="forecast-progress-panel" aria-label="Forecast run progress">
+      <div className="forecast-progress-header">
+        <div>
+          <span className="scene-kicker">Run progress</span>
+          <h2>Forecast pipeline</h2>
+        </div>
+        <span className="forecast-progress-summary">
+          {completeCount}/{totalCount} complete
+          {errorCount > 0 ? ` / ${errorCount} error${errorCount === 1 ? "" : "s"}` : ""}
+        </span>
+      </div>
+
+      <div className="forecast-progress-list">
+        {items.map((item) => (
+          <div
+            className={`forecast-progress-row forecast-progress-row-${item.status}`}
+            key={item.ticker}
+          >
+            <span className="forecast-progress-dot" aria-hidden="true" />
+            <span className="forecast-progress-ticker">{item.ticker}</span>
+            <span className="forecast-progress-step">
+              {getForecastProgressLabel(item.status)}
+            </span>
+            <span className="forecast-progress-message">{item.error ?? item.message}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -573,6 +700,38 @@ function mergeTickers(existing: string[], incoming: string[]): string[] {
     seen.add(ticker);
     return true;
   });
+}
+
+function isTerminalProgressStatus(status: ForecastProgressStatus): boolean {
+  return status === "complete" || status === "error";
+}
+
+function getForecastProgressLabel(status: ForecastProgressStatus): string {
+  const labels: Record<ForecastProgressStatus, string> = {
+    queued: "Queued",
+    getting_data: "Getting data",
+    calculating_models: "Calculating models",
+    building_index_forecast: "Index / benchmark forecast",
+    finalizing: "Finalizing output",
+    complete: "Complete",
+    error: "Error",
+  };
+
+  return labels[status];
+}
+
+function getForecastProgressMessage(status: ForecastProgressStatus): string {
+  const messages: Record<ForecastProgressStatus, string> = {
+    queued: "Waiting to start",
+    getting_data: "Requesting historical prices and benchmark candidates",
+    calculating_models: "Preparing model forecasts and diagnostics",
+    building_index_forecast: "Comparing market index movement with the stock",
+    finalizing: "Combining model outputs and reliability checks",
+    complete: "Forecast board is ready",
+    error: "Forecast request failed",
+  };
+
+  return messages[status];
 }
 
 function parsePositiveInteger(value: string): number | null {
