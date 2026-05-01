@@ -2,7 +2,7 @@ import pytest
 from app.api.routes.explanations import forecast_explanation_service, explanation_rate_limiter
 from app.core.config import get_settings
 from app.main import app
-from app.models.schemas import ExplanationResponse
+from app.models.schemas import ExplanationResponse, ForecastResponse
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
@@ -21,11 +21,10 @@ def test_explanations_endpoint_returns_grounded_sections_without_authentication(
     def fake_explain(forecast):
         return {
             "model": "gpt-5.4-mini",
-            "plain_language_explanation": "The model projects a modest increase over the forecast horizon.",
-            "reliability_summary": "Confidence is moderate because benchmark alignment is reasonable.",
-            "limitations_summary": "The forecast depends on historical patterns and heuristic safeguards.",
+            "ai_confidence_percent": 67,
+            "ai_verdict": "I would treat this forecast number as moderately believable.",
+            "reasoning_summary": "Benchmark alignment is reasonable, but the safeguards still make this educational rather than financial advice.",
             "forecast_signal": "bullish",
-            "disclaimer": "This tool is educational and not financial advice.",
         }
 
     monkeypatch.setattr(forecast_explanation_service, "explain", fake_explain)
@@ -92,7 +91,8 @@ def test_explanations_endpoint_returns_grounded_sections_without_authentication(
     assert response.status_code == 200
     payload = response.json()
     assert payload["model"] == "gpt-5.4-mini"
-    assert "modest increase" in payload["plain_language_explanation"]
+    assert payload["ai_confidence_percent"] == 67
+    assert "moderately believable" in payload["ai_verdict"]
     assert payload["forecast_signal"] == "bullish"
 
 
@@ -104,11 +104,10 @@ def test_explanations_endpoint_enforces_ip_hourly_limit(monkeypatch) -> None:
         "explain",
         lambda forecast: {
             "model": "gpt-5.4-mini",
-            "plain_language_explanation": "Explanation.",
-            "reliability_summary": "Reliable enough.",
-            "limitations_summary": "Has limits.",
+            "ai_confidence_percent": 55,
+            "ai_verdict": "I would not fully trust this exact price target.",
+            "reasoning_summary": "The model has limits and this is not financial advice.",
             "forecast_signal": "neutral",
-            "disclaimer": "Not financial advice.",
         },
     )
 
@@ -139,11 +138,10 @@ def test_explanations_endpoint_enforces_global_daily_limit(monkeypatch) -> None:
         "explain",
         lambda forecast: {
             "model": "gpt-5.4-mini",
-            "plain_language_explanation": "Explanation.",
-            "reliability_summary": "Reliable enough.",
-            "limitations_summary": "Has limits.",
+            "ai_confidence_percent": 55,
+            "ai_verdict": "I would not fully trust this exact price target.",
+            "reasoning_summary": "The model has limits and this is not financial advice.",
             "forecast_signal": "neutral",
-            "disclaimer": "Not financial advice.",
         },
     )
 
@@ -219,26 +217,35 @@ def test_explanation_response_rejects_invalid_forecast_signal() -> None:
     with pytest.raises(ValidationError):
         ExplanationResponse(
             model="gpt-5.4-mini",
-            plain_language_explanation="Slight upward move.",
-            reliability_summary="Confidence is moderate.",
-            limitations_summary="Signals are heuristic.",
+            ai_confidence_percent=50,
+            ai_verdict="I would not fully trust this exact price target.",
+            reasoning_summary="Signals are heuristic and this is not financial advice.",
             forecast_signal="buy",
-            disclaimer="Not financial advice.",
         )
 
 
-def test_parse_json_response_requires_exact_keys_and_valid_signal() -> None:
+def test_explanation_response_rejects_invalid_ai_confidence_percent() -> None:
+    with pytest.raises(ValidationError):
+        ExplanationResponse(
+            model="gpt-5.4-mini",
+            ai_confidence_percent=101,
+            ai_verdict="I would trust this forecast number.",
+            reasoning_summary="Signals are strong, but this is not financial advice.",
+            forecast_signal="bullish",
+        )
+
+
+def test_parse_json_response_requires_exact_keys_valid_signal_and_confidence_percent() -> None:
     service = forecast_explanation_service
 
     with pytest.raises(ValueError, match="unexpected keys: extra_field"):
         service._parse_json_response(
             """
             {
-              "plain_language_explanation": "Modest increase.",
-              "reliability_summary": "Moderate confidence.",
-              "limitations_summary": "Heuristic limitations apply.",
+              "ai_confidence_percent": 67,
+              "ai_verdict": "I would trust this forecast number.",
+              "reasoning_summary": "Signals are strong, but this is not financial advice.",
               "forecast_signal": "bullish",
-              "disclaimer": "Not financial advice.",
               "extra_field": "should fail"
             }
             """
@@ -248,14 +255,53 @@ def test_parse_json_response_requires_exact_keys_and_valid_signal() -> None:
         service._parse_json_response(
             """
             {
-              "plain_language_explanation": "Modest increase.",
-              "reliability_summary": "Moderate confidence.",
-              "limitations_summary": "Heuristic limitations apply.",
-              "forecast_signal": "hold",
-              "disclaimer": "Not financial advice."
+              "ai_confidence_percent": 67,
+              "ai_verdict": "I would trust this forecast number.",
+              "reasoning_summary": "Signals are strong, but this is not financial advice.",
+              "forecast_signal": "hold"
             }
             """
         )
+
+    with pytest.raises(ValueError, match="between 0 and 100"):
+        service._parse_json_response(
+            """
+            {
+              "ai_confidence_percent": 101,
+              "ai_verdict": "I would trust this forecast number.",
+              "reasoning_summary": "Signals are strong, but this is not financial advice.",
+              "forecast_signal": "bullish"
+            }
+            """
+        )
+
+
+def test_prompts_require_direct_forecast_number_trust_assessment() -> None:
+    service = forecast_explanation_service
+    system_prompt = service._system_prompt()
+    user_prompt = service._user_prompt(ExplanationResponseTestPayload.forecast())
+    combined_prompt = f"{system_prompt} {user_prompt}"
+
+    assert "whether the forecast number itself looks believable" in system_prompt
+    assert "ai_confidence_percent must be an integer from 0 to 100" in system_prompt
+    assert "AI-derived confidence" in user_prompt
+    assert "Each text section must be at most two clear, direct sentences" in user_prompt
+    assert "summary.predicted_price" in user_prompt
+    assert "summary.predicted_percent_change" in user_prompt
+    assert "I would not fully trust this exact price target" in user_prompt
+    assert "I would be skeptical of this number" in user_prompt
+    assert "diagnostics.fallback_applied" in user_prompt
+    assert "diagnostics.benchmark_agreement_score" in user_prompt
+    assert "diagnostics.recent_volatility" in user_prompt
+    assert "ensemble_components" in user_prompt
+    assert "Do not output buy, sell, or hold advice" in combined_prompt
+    assert "Do not generate a new prediction" in combined_prompt
+
+
+class ExplanationResponseTestPayload:
+    @staticmethod
+    def forecast() -> ForecastResponse:
+        return ForecastResponse(**minimal_explanation_payload()["forecast"])
 
 
 def minimal_explanation_payload() -> dict:
